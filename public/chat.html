@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#0a0a0f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="logo-icon.jpg" type="image/jpeg">
+  <link rel="apple-touch-icon" href="logo-icon.jpg">
   <link rel="manifest" href="manifest.json">
   <title>Dark Link — Messagerie</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1109,6 +1111,123 @@
     @media (min-width: 769px) and (max-width: 1024px) {
       .sidebar { width: 320px; }
     }
+
+    /* ===== MESSAGES VOCAUX ===== */
+    .mic-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 8px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: color 0.2s, background 0.2s;
+    }
+    .mic-btn:hover { color: var(--primary); background: rgba(26,110,255,0.1); }
+    .mic-btn.recording {
+      color: #ef4444;
+      background: rgba(239,68,68,0.15);
+      animation: pulse-mic 1.2s infinite;
+    }
+    @keyframes pulse-mic {
+      0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.35); }
+      50%      { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+    }
+
+    /* Barre d'enregistrement en cours */
+    .voice-recording-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 13px;
+      color: #ef4444;
+      flex: 1;
+      animation: fadein 0.2s;
+    }
+    .voice-recording-bar .rec-dot {
+      width: 8px; height: 8px;
+      background: #ef4444;
+      border-radius: 50%;
+      animation: pulse-dot 1s infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+    }
+    .voice-recording-bar .rec-timer {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .voice-cancel-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 12px;
+      padding: 4px 8px; border-radius: 6px;
+      margin-left: auto;
+      transition: color 0.2s;
+    }
+    .voice-cancel-btn:hover { color: #ef4444; }
+
+    /* Player audio dans les bulles */
+    .audio-msg-player {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 10px 12px;
+      min-width: 200px;
+      max-width: 280px;
+    }
+    .audio-play-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      color: #fff;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .audio-play-btn:hover { background: var(--primary-hover); transform: scale(1.06); }
+    .audio-progress-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .audio-progress-bar {
+      width: 100%;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.15);
+      outline: none;
+      cursor: pointer;
+    }
+    .audio-progress-bar::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+    }
+    .audio-duration-lbl {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .message-row.sent .audio-msg-player {
+      background: rgba(26,110,255,0.18);
+    }
   </style>
 </head>
 <body>
@@ -1168,9 +1287,9 @@
     <main class="chat-view" id="chatView">
       <div class="empty-chat-state" id="emptyChatState">
         <div class="empty-chat-logo">
-          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.82.49 3.53 1.34 5L2 22l5.24-1.31C8.67 21.49 10.29 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
+          <img src="logo-full.jpg" alt="Dark Link" style="width: 220px; max-width: 80%; border-radius: 16px; opacity: 0.9; box-shadow: 0 8px 40px rgba(26,110,255,0.3);">
         </div>
-        <h2>Dark Link Messagerie</h2>
+        <h2>Bienvenue sur Dark Link</h2>
         <p>Sélectionnez une discussion ou consultez les statuts.</p>
       </div>
 
@@ -1213,11 +1332,29 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
         </button>
 
-        <div class="message-input-wrap">
+        <!-- Barre d'enregistrement vocal (cachée par défaut) -->
+        <div class="voice-recording-bar" id="voiceRecordingBar">
+          <span class="rec-dot"></span>
+          <span>Enregistrement en cours</span>
+          <span class="rec-timer" id="recTimer">0:00</span>
+          <button class="voice-cancel-btn" onclick="cancelVoiceRecording()" title="Annuler">✕ Annuler</button>
+        </div>
+
+        <div class="message-input-wrap" id="messageInputWrap">
           <input type="text" id="messageInput" class="message-input" placeholder="Message..." autocomplete="off" onkeydown="handleInputKey(event)" oninput="handleTypingEvent()">
         </div>
 
-        <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Envoyer">
+        <!-- Bouton micro (affiché quand le champ est vide) -->
+        <button class="mic-btn" id="micBtn" onclick="toggleVoiceRecording()" title="Message vocal">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="2" width="6" height="11" rx="3"></rect>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="22"></line>
+            <line x1="8" y1="22" x2="16" y2="22"></line>
+          </svg>
+        </button>
+
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Envoyer" style="display:none;">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
       </div>
@@ -2384,7 +2521,11 @@
 
       const mediaUrl = msg.content && (msg.content.startsWith('/uploads/') || msg.media_type !== 'text') ? msg.content : null;
 
-      if (mediaUrl) {
+      if (msg.media_type === 'audio' && mediaUrl) {
+        // --- Lecteur de message vocal ---
+        const player = createAudioPlayer(mediaUrl);
+        bubble.appendChild(player);
+      } else if (mediaUrl) {
         const mediaWrap = document.createElement('div');
         mediaWrap.className = 'media-bubble-wrap';
         const filename = mediaUrl.split('/').pop();
@@ -2455,6 +2596,7 @@
       }
 
       input.value = '';
+      updateMicSendBtnVisibility();
       stopTypingNow();
     }
 
@@ -2491,9 +2633,205 @@
       e.target.value = '';
     }
 
+    // ===== LOGIQUE MESSAGES VOCAUX =====
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let recTimerInterval = null;
+    let recSeconds = 0;
+    let isRecording = false;
+
+    function createAudioPlayer(url) {
+      const audio = new Audio(url);
+      audio.preload = 'metadata';
+
+      const wrap = document.createElement('div');
+      wrap.className = 'audio-msg-player';
+
+      // Bouton Play/Pause
+      const playBtn = document.createElement('button');
+      playBtn.className = 'audio-play-btn';
+      playBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>`;
+
+      // Barre de progression
+      const progressWrap = document.createElement('div');
+      progressWrap.className = 'audio-progress-wrap';
+      const progressBar = document.createElement('input');
+      progressBar.type = 'range';
+      progressBar.className = 'audio-progress-bar';
+      progressBar.min = 0; progressBar.max = 100; progressBar.value = 0;
+      const durationLbl = document.createElement('span');
+      durationLbl.className = 'audio-duration-lbl';
+      durationLbl.textContent = '0:00';
+
+      progressWrap.appendChild(progressBar);
+      progressWrap.appendChild(durationLbl);
+      wrap.appendChild(playBtn);
+      wrap.appendChild(progressWrap);
+
+      // Formatage durée
+      const fmtTime = s => { const m = Math.floor(s/60); const ss = Math.floor(s%60); return `${m}:${ss<10?'0':''}${ss}`; };
+
+      audio.addEventListener('loadedmetadata', () => {
+        if (isFinite(audio.duration)) durationLbl.textContent = fmtTime(audio.duration);
+      });
+
+      audio.addEventListener('timeupdate', () => {
+        if (audio.duration) {
+          progressBar.value = (audio.currentTime / audio.duration) * 100;
+          durationLbl.textContent = fmtTime(audio.currentTime);
+        }
+      });
+
+      audio.addEventListener('ended', () => {
+        playBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>`;
+        progressBar.value = 0;
+        if (isFinite(audio.duration)) durationLbl.textContent = fmtTime(audio.duration);
+      });
+
+      playBtn.addEventListener('click', () => {
+        if (audio.paused) {
+          // Mettre pause sur les autres lectures
+          document.querySelectorAll('.audio-msg-player audio-instance').forEach(a => a.pause());
+          audio.play();
+          playBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+        } else {
+          audio.pause();
+          playBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>`;
+        }
+      });
+
+      progressBar.addEventListener('input', () => {
+        if (audio.duration) audio.currentTime = (progressBar.value / 100) * audio.duration;
+      });
+
+      return wrap;
+    }
+
+    function updateMicSendBtnVisibility() {
+      const txt = document.getElementById('messageInput').value.trim();
+      document.getElementById('micBtn').style.display = txt ? 'none' : 'flex';
+      document.getElementById('sendBtn').style.display = txt ? 'flex' : 'none';
+    }
+
+    async function toggleVoiceRecording() {
+      if (isRecording) {
+        stopVoiceRecording();
+      } else {
+        startVoiceRecording();
+      }
+    }
+
+    async function startVoiceRecording() {
+      if (!currentChat) return;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+
+        mediaRecorder = new MediaRecorder(stream, { mimeType });
+        audioChunks = [];
+
+        mediaRecorder.addEventListener('dataavailable', e => {
+          if (e.data.size > 0) audioChunks.push(e.data);
+        });
+
+        mediaRecorder.addEventListener('stop', async () => {
+          stream.getTracks().forEach(t => t.stop());
+          const ext = mimeType.includes('ogg') ? 'ogg' : 'webm';
+          const blob = new Blob(audioChunks, { type: mimeType });
+          await uploadAndSendVoice(blob, ext);
+        });
+
+        mediaRecorder.start();
+        isRecording = true;
+        recSeconds = 0;
+
+        document.getElementById('micBtn').classList.add('recording');
+        document.getElementById('voiceRecordingBar').style.display = 'flex';
+        document.getElementById('messageInputWrap').style.display = 'none';
+
+        recTimerInterval = setInterval(() => {
+          recSeconds++;
+          const m = Math.floor(recSeconds / 60);
+          const s = recSeconds % 60;
+          document.getElementById('recTimer').textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+          // Limite automatique à 2 minutes
+          if (recSeconds >= 120) stopVoiceRecording();
+        }, 1000);
+
+      } catch (err) {
+        if (err.name === 'NotAllowedError') {
+          alert('Accès au microphone refusé. Autorisez le microphone dans les paramètres de votre navigateur.');
+        } else {
+          alert('Impossible d\'accéder au microphone : ' + err.message);
+        }
+      }
+    }
+
+    function stopVoiceRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+      clearInterval(recTimerInterval);
+      isRecording = false;
+      document.getElementById('micBtn').classList.remove('recording');
+      document.getElementById('voiceRecordingBar').style.display = 'none';
+      document.getElementById('messageInputWrap').style.display = 'flex';
+    }
+
+    function cancelVoiceRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        // Vider les chunks pour ne pas envoyer
+        mediaRecorder.addEventListener('stop', () => { audioChunks = []; }, { once: true });
+        mediaRecorder.stream.getTracks().forEach(t => t.stop());
+        mediaRecorder.stop();
+      }
+      clearInterval(recTimerInterval);
+      isRecording = false;
+      audioChunks = [];
+      document.getElementById('micBtn').classList.remove('recording');
+      document.getElementById('voiceRecordingBar').style.display = 'none';
+      document.getElementById('messageInputWrap').style.display = 'flex';
+    }
+
+    async function uploadAndSendVoice(blob, ext) {
+      if (!currentChat || audioChunks.length === 0 || blob.size < 1000) return;
+      const formData = new FormData();
+      formData.append('media', blob, `voice_${Date.now()}.${ext}`);
+
+      try {
+        const res = await fetch('/api/upload/media', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (res.ok && data.mediaUrl) {
+          if (currentChat.type === 'direct') {
+            socket.emit('send_message', {
+              sender_id: currentUser.id,
+              receiver_id: currentChat.id,
+              content: data.mediaUrl,
+              media_type: 'audio'
+            });
+          } else if (currentChat.type === 'group') {
+            socket.emit('send_group_message', {
+              sender_id: currentUser.id,
+              group_id: currentChat.id,
+              content: data.mediaUrl,
+              media_type: 'audio'
+            });
+          }
+        } else {
+          alert(data.error || 'Erreur lors de l\'envoi du message vocal.');
+        }
+      } catch (err) {
+        alert('Erreur réseau lors de l\'envoi du message vocal.');
+      }
+    }
+    // ===== FIN LOGIQUE MESSAGES VOCAUX =====
+
     let isCurrentlyTyping = false;
     let typingTimer = null;
     function handleTypingEvent() {
+      updateMicSendBtnVisibility();
       if (!currentChat) return;
       if (!isCurrentlyTyping) {
         isCurrentlyTyping = true;

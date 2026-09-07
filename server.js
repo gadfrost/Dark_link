@@ -72,15 +72,20 @@ const fileFilter = (req, file, cb) => {
     const allowedMimeTypes = [
         'image/jpeg', 'image/png', 'image/webp', 'image/gif',
         'video/mp4', 'video/webm', 'video/quicktime',
-        'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/mp4'
+        'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/mp4',
+        'audio/webm', 'audio/webm;codecs=opus'  // Messages vocaux via MediaRecorder
     ];
     const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.mp4', '.webm', '.mov', '.mp3', '.ogg', '.wav'];
     const ext = path.extname(file.originalname).toLowerCase();
 
-    if (allowedMimeTypes.includes(file.mimetype) && allowedExtensions.includes(ext)) {
+    // Accepter les fichiers audio sans extension (blob MediaRecorder) ou avec extension valide
+    const mimeOk = allowedMimeTypes.some(m => file.mimetype.startsWith(m.split(';')[0]));
+    const extOk = allowedExtensions.includes(ext) || ext === '';
+
+    if (mimeOk && extOk) {
         cb(null, true);
     } else {
-        cb(new Error('Format de fichier non autorisé. Seules les images et vidéos sont acceptées.'), false);
+        cb(new Error('Format de fichier non autorisé. Seules les images, vidéos et audios sont acceptés.'), false);
     }
 };
 
