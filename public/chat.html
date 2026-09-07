@@ -88,6 +88,23 @@
       min-height: 60px;
     }
 
+    .install-app-btn {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      border: 1px solid rgba(26, 110, 255, 0.5);
+      border-radius: 9px;
+      background: rgba(26, 110, 255, 0.14);
+      color: #bfdbfe;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .install-app-btn.visible { display: inline-flex; }
+
     .user-profile-badge {
       display: flex;
       align-items: center;
@@ -1248,6 +1265,10 @@
         </a>
 
         <div class="sidebar-actions">
+          <button class="install-app-btn" id="installAppBtn" type="button" onclick="installApp()" title="Installer Dark Link sur cet appareil">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>
+            Installer
+          </button>
           <a href="profile.html" class="icon-btn" title="Paramètres">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           </a>
@@ -1524,6 +1545,7 @@
     let currentStoryUserIndex = 0;
     let currentStoryItemIndex = 0;
     let storyTimer = null;
+    let deferredInstallPrompt = null;
 
     // Helper pour envoyer le header Authorization sur toutes les requêtes sécurisées
     function authFetch(url, options = {}) {
@@ -1566,6 +1588,62 @@
       }
     }
 
+    function setupInstallPrompt() {
+      const installButton = document.getElementById('installAppBtn');
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      if (!installButton || isStandalone) return;
+
+      installButton.classList.add('visible');
+      window.addEventListener('beforeinstallprompt', event => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+      });
+      window.addEventListener('appinstalled', () => {
+        deferredInstallPrompt = null;
+        installButton.classList.remove('visible');
+      });
+    }
+
+    async function installApp() {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        return;
+      }
+      alert('Pour installer Dark Link sur iPhone/iPad, ouvrez le menu Partager puis choisissez « Sur l’écran d’accueil ».');
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      return Uint8Array.from(atob(base64), char => char.charCodeAt(0));
+    }
+
+    async function registerPushSubscription(registration) {
+      if (!authToken || !('PushManager' in window) || !('Notification' in window)) return;
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') return;
+        const keyResponse = await fetch('/api/vapidPublicKey');
+        const { publicKey } = await keyResponse.json();
+        let subscription = await registration.pushManager.getSubscription();
+        if (!subscription) {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey)
+          });
+        }
+        await authFetch('/api/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(subscription)
+        });
+      } catch (error) {
+        console.warn('Notifications Push indisponibles:', error);
+      }
+    }
+
     function init() {
       const stored = localStorage.getItem('dark_link_user');
       authToken = localStorage.getItem('dark_link_token');
@@ -1587,11 +1665,13 @@
       loadGroups();
       loadStatuses();
       loadFriendRequests();
+      setupInstallPrompt();
 
       // Register SW & Web Push
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').then(reg => {
           console.log('SW enregistré', reg);
+          registerPushSubscription(reg);
         }).catch(err => console.error('Erreur SW', err));
       }
     }

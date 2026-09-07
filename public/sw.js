@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dark-link-cache-v1';
+const CACHE_NAME = 'dark-link-cache-v2';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -52,6 +52,8 @@ self.addEventListener('push', event => {
     icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%231a6eff' rx='100'/%3E%3Cpath fill='%23fff' d='M256 120c-75.1 0-136 50.1-136 112 0 35.8 20.3 67.5 50.8 88.5l-14.4 43.1a8 8 0 0010.5 9.9l51.5-22.1c11.8 3.5 24.5 5.5 37.6 5.5 75.1 0 136-50.1 136-112S331.1 120 256 120z'/%3E%3C/svg%3E",
     badge: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Ccircle cx='256' cy='256' r='256' fill='%23fff'/%3E%3C/svg%3E",
     vibrate: [200, 100, 200],
+    tag: data.tag || 'dark-link-notification',
+    renotify: true,
     data: data.url || '/chat.html'
   };
 

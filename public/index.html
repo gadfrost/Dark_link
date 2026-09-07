@@ -257,6 +257,26 @@
       color: var(--text-muted);
     }
 
+    .install-app-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      min-height: 44px;
+      margin-top: 16px;
+      padding: 10px 14px;
+      border: 1px solid rgba(26, 110, 255, 0.5);
+      border-radius: 10px;
+      background: rgba(26, 110, 255, 0.14);
+      color: #bfdbfe;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .install-app-btn.visible { display: flex; }
+
     @media (max-width: 480px) {
       .auth-container {
         padding: 28px 20px;
@@ -367,12 +387,38 @@
     <div class="footer-help">
       <span>Dark Link &copy; 2026 — Sécurité & Instantanéité</span>
     </div>
+    <button class="install-app-btn" id="installAppBtn" type="button" onclick="installApp()">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>
+      Installer Dark Link sur le téléphone
+    </button>
   </div>
 
   <script>
     const savedUser = localStorage.getItem('dark_link_user');
     if (savedUser) {
       window.location.href = 'chat.html';
+    }
+
+    let deferredInstallPrompt = null;
+    const installButton = document.getElementById('installAppBtn');
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (!isStandalone) {
+      installButton.classList.add('visible');
+      window.addEventListener('beforeinstallprompt', event => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+      });
+      window.addEventListener('appinstalled', () => installButton.classList.remove('visible'));
+    }
+
+    async function installApp() {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        return;
+      }
+      alert('Pour installer Dark Link sur iPhone/iPad, ouvrez le menu Partager puis choisissez « Sur l’écran d’accueil ».');
     }
 
     function showAlert(message, type = 'error') {

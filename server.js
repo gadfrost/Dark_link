@@ -266,6 +266,29 @@ function isUserOnline(userId) {
     return Boolean(sockets && sockets.size > 0);
 }
 
+async function sendPushNotification(userId, payload) {
+    try {
+        const subscriptions = await queryDB(
+            'SELECT id, subscription FROM push_subscriptions WHERE user_id = $1',
+            [userId]
+        );
+
+        await Promise.all(subscriptions.map(async ({ id, subscription }) => {
+            try {
+                await webpush.sendNotification(subscription, JSON.stringify(payload));
+            } catch (error) {
+                if (error.statusCode === 404 || error.statusCode === 410) {
+                    await db.query('DELETE FROM push_subscriptions WHERE id = $1', [id]);
+                } else {
+                    console.error(`Erreur Push pour l'utilisateur ${userId}:`, error.message);
+                }
+            }
+        }));
+    } catch (error) {
+        console.error('Erreur de récupération des abonnements Push:', error.message);
+    }
+}
+
 // -------------------------------------------------------------
 // ROUTES D'AUTHENTIFICATION ET WEB PUSH
 // -------------------------------------------------------------
@@ -278,9 +301,17 @@ app.post('/api/subscribe', authenticateToken, async (req, res) => {
     const subscription = req.body;
     const userId = req.user.id;
 
+    if (!subscription || !subscription.endpoint || !subscription.keys) {
+        return res.status(400).json({ error: 'Abonnement Push invalide.' });
+    }
+
     try {
         await db.query(
-            'INSERT INTO push_subscriptions (user_id, subscription) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+            "DELETE FROM push_subscriptions WHERE user_id = $1 AND subscription->>'endpoint' = $2",
+            [userId, subscription.endpoint]
+        );
+        await db.query(
+            'INSERT INTO push_subscriptions (user_id, subscription) VALUES ($1, $2)',
             [userId, subscription]
         );
         res.status(201).json({ message: 'Abonnement Push enregistré avec succès.' });
@@ -574,6 +605,13 @@ app.post('/api/friend-request', authenticateToken, async (req, res) => {
         const insertSql = 'INSERT INTO friendships (sender_id, receiver_id, status) VALUES ($1, $2, \'pending\')';
         await db.query(insertSql, [senderId, receiverId]);
         io.to(`user_${receiverId}`).emit('friend_request_received', { senderId });
+        const senderRows = await queryDB('SELECT username FROM users WHERE id = $1', [senderId]);
+        await sendPushNotification(receiverId, {
+            title: 'Nouvelle demande d’amitié',
+            body: `${senderRows[0]?.username || 'Un utilisateur'} souhaite vous ajouter.`,
+            url: '/chat.html',
+            tag: 'friend-request'
+        });
         res.json({ message: 'Demande envoyée !' });
     } catch (err) {
         res.status(500).json({ error: 'Erreur lors de l\'envoi.' });
@@ -591,6 +629,12 @@ app.post('/api/friend-request/respond', authenticateToken, async (req, res) => {
             if (rRes.rows.length > 0) {
                 io.to(`user_${rRes.rows[0].sender_id}`).emit('friend_request_accepted', { withUserId: rRes.rows[0].receiver_id });
                 io.to(`user_${rRes.rows[0].receiver_id}`).emit('friend_request_accepted', { withUserId: rRes.rows[0].sender_id });
+                await sendPushNotification(rRes.rows[0].sender_id, {
+                    title: 'Demande acceptée',
+                    body: 'Votre demande d’amitié a été acceptée.',
+                    url: '/chat.html',
+                    tag: 'friend-accepted'
+                });
             }
             res.json({ message: 'Demande acceptée.' });
         } else {
@@ -672,6 +716,12 @@ app.post('/api/groups', authenticateToken, async (req, res) => {
                         ON CONFLICT (group_id, user_id) DO NOTHING
                     `, [groupId, uid]);
                     io.to(`user_${uid}`).emit('added_to_group', { groupId, name });
+                    await sendPushNotification(uid, {
+                        title: 'Ajout à un groupe',
+                        body: `Vous avez été ajouté au groupe « ${name.trim()} ».`,
+                        url: `/chat.html?group=${groupId}`,
+                        tag: `group-added-${groupId}`
+                    });
                 }
             }
         }
@@ -849,6 +899,14 @@ app.post('/api/statuses', authenticateToken, async (req, res) => {
         const result = await db.query(sql, [user_id, content || '', media_url || null, mType, bg, duration, duration]);
 
         io.emit('new_status_alert', { user_id });
+        const statusRecipients = await queryDB('SELECT id FROM users WHERE id <> $1', [user_id]);
+        const authorRows = await queryDB('SELECT username FROM users WHERE id = $1', [user_id]);
+        await Promise.all(statusRecipients.map(recipient => sendPushNotification(recipient.id, {
+            title: 'Nouveau statut',
+            body: `${authorRows[0]?.username || 'Un contact'} a publié un nouveau statut.`,
+            url: '/chat.html',
+            tag: 'new-status'
+        })));
 
         res.status(201).json({
             message: 'Statut publié avec succès',
@@ -1027,6 +1085,14 @@ io.on('connection', (socket) => {
 
             io.to(`user_${receiver_id}`).emit('receive_message', savedMessage);
             io.to(`user_${verifiedSenderId}`).emit('message_sent_confirm', savedMessage);
+
+            const senderRows = await queryDB('SELECT username FROM users WHERE id = $1', [verifiedSenderId]);
+            await sendPushNotification(receiver_id, {
+                title: senderRows[0]?.username || 'Nouveau message',
+                body: mType === 'text' ? (textContent || 'Nouveau message') : 'Vous avez reçu un fichier.',
+                url: `/chat.html?user=${verifiedSenderId}`,
+                tag: `direct-${verifiedSenderId}`
+            });
         } catch (err) {
             console.error('Erreur enregistrement message:', err);
         }
@@ -1059,6 +1125,16 @@ io.on('connection', (socket) => {
             const rows = await queryDB(fetchSql, [res.rows[0].id]);
             if (rows.length > 0) {
                 io.to(`group_${group_id}`).emit('receive_group_message', rows[0]);
+                const members = await queryDB(
+                    'SELECT user_id FROM group_members WHERE group_id = $1 AND user_id <> $2',
+                    [group_id, verifiedSenderId]
+                );
+                await Promise.all(members.map(member => sendPushNotification(member.user_id, {
+                    title: rows[0].sender_username || 'Nouveau message',
+                    body: mType === 'text' ? (textContent || 'Nouveau message') : 'Un fichier a été partagé dans le groupe.',
+                    url: `/chat.html?group=${group_id}`,
+                    tag: `group-${group_id}`
+                })));
             }
         } catch (err) {
             console.error('Erreur message groupe:', err);
