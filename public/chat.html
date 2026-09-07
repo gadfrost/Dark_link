@@ -1,0 +1,2564 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Dark Link — Messagerie</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root {
+      --bg-main: #0a0a0f;
+      --bg-sidebar: #111118;
+      --bg-card: #161622;
+      --bg-input: #1a1a24;
+      --border-color: #242436;
+      --primary: #1a6eff;
+      --primary-hover: #3b82f6;
+      --primary-glow: rgba(26, 110, 255, 0.35);
+      --msg-sent: #1a6eff;
+      --msg-received: #1e1e2d;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --online: #10b981;
+      --offline: #64748b;
+      --danger: #ef4444;
+      --gold: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: var(--bg-main);
+      color: var(--text-main);
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .app-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      background: var(--bg-main);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 390px;
+      min-width: 320px;
+      max-width: 440px;
+      height: 100%;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .sidebar-header {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(17, 17, 24, 0.95);
+      backdrop-filter: blur(8px);
+      min-height: 60px;
+    }
+
+    .user-profile-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text-main);
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 12px;
+      transition: background 0.2s;
+    }
+
+    .user-profile-badge:hover {
+      background: var(--bg-input);
+    }
+
+    .user-avatar-wrap {
+      position: relative;
+      width: 42px;
+      height: 42px;
+      flex-shrink: 0;
+    }
+
+    .avatar-img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      background: var(--bg-input);
+      border: 2px solid var(--border-color);
+    }
+
+    .online-indicator {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--online);
+      border: 2px solid var(--bg-sidebar);
+    }
+
+    .online-indicator.offline {
+      background: var(--offline);
+    }
+
+    .user-info-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .user-name {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .user-status-short {
+      font-size: 11px;
+      color: var(--text-muted);
+      max-width: 130px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .icon-btn:hover, .icon-btn:active {
+      background: var(--bg-input);
+      color: var(--text-main);
+    }
+
+    .search-box-container {
+      padding: 10px 14px 6px 14px;
+    }
+
+    .search-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-input-wrap svg {
+      position: absolute;
+      left: 12px;
+      color: var(--text-muted);
+      width: 16px;
+      height: 16px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 10px 12px 10px 36px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: var(--text-main);
+      font-size: 16px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+    }
+
+    .sidebar-tabs {
+      display: flex;
+      padding: 4px 8px 0 8px;
+      gap: 2px;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-sidebar);
+    }
+
+    .tab-item {
+      flex: 1;
+      padding: 10px 2px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      white-space: nowrap;
+      min-height: 42px;
+    }
+
+    .tab-item.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .tab-badge {
+      background: var(--primary);
+      color: #fff;
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .sidebar-content::-webkit-scrollbar { width: 4px; }
+    .sidebar-content::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+
+    .chat-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      position: relative;
+      margin-bottom: 4px;
+      min-height: 64px;
+    }
+
+    .chat-item:hover, .chat-item:active {
+      background: var(--bg-card);
+    }
+
+    .chat-item.active {
+      background: #1b1f33;
+      border-left: 3px solid var(--primary);
+    }
+
+    .chat-item-avatar {
+      position: relative;
+      width: 46px;
+      height: 46px;
+      flex-shrink: 0;
+    }
+
+    .chat-item-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .chat-item-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .chat-item-name {
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-item-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .chat-item-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chat-item-snippet {
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 190px;
+    }
+
+    .unread-pill {
+      background: var(--primary);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      padding: 0 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .create-group-banner {
+      background: linear-gradient(135deg, rgba(26, 110, 255, 0.15), rgba(13, 59, 143, 0.25));
+      border: 1px dashed var(--primary);
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+
+    .btn-create-action {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 38px;
+    }
+
+    .status-user-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-bottom: 4px;
+      min-height: 60px;
+    }
+
+    .status-user-item:hover, .status-user-item:active {
+      background: var(--bg-card);
+    }
+
+    .story-ring-wrap {
+      position: relative;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      padding: 2px;
+      background: var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .story-ring-wrap.has-new {
+      background: linear-gradient(135deg, #1a6eff, #00d26a, #4d90ff);
+    }
+
+    .story-ring-wrap img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      background: var(--bg-input);
+      border: 2px solid var(--bg-sidebar);
+    }
+
+    .add-status-plus {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      background: var(--primary);
+      color: #fff;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      border: 2px solid var(--bg-sidebar);
+    }
+
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      margin: 14px 4px 6px 4px;
+    }
+
+    .friend-req-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .req-user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .action-btn-sm {
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      min-height: 32px;
+    }
+
+    .btn-accept { background: var(--primary); color: #fff; }
+    .btn-reject { background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border-color); }
+
+    /* ZONE DE CHAT */
+    .chat-view {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #0d0d14;
+      position: relative;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .empty-chat-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      color: var(--text-muted);
+    }
+
+    .empty-chat-logo {
+      width: 72px;
+      height: 72px;
+      background: var(--bg-card);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      border: 1px solid var(--border-color);
+    }
+
+    .empty-chat-logo svg {
+      width: 36px;
+      height: 36px;
+      fill: var(--primary);
+    }
+
+    .empty-chat-state h2 {
+      font-size: 20px;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .chat-header {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-sidebar);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 5;
+      min-height: 60px;
+    }
+
+    .chat-header-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      flex: 1;
+    }
+
+    .back-to-list-btn {
+      display: none;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      cursor: pointer;
+      padding: 6px;
+      margin-right: 4px;
+      border-radius: 8px;
+    }
+
+    .chat-header-info h3 {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .chat-header-status {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot-sm {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--online);
+      display: inline-block;
+    }
+
+    .status-dot-sm.offline {
+      background: var(--offline);
+    }
+
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background-image: radial-gradient(rgba(26, 110, 255, 0.03) 1px, transparent 1px);
+      background-size: 24px 24px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .messages-container::-webkit-scrollbar { width: 4px; }
+    .messages-container::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+
+    .message-row {
+      display: flex;
+      margin-bottom: 2px;
+    }
+
+    .message-row.sent { justify-content: flex-end; }
+    .message-row.received { justify-content: flex-start; }
+
+    .message-bubble {
+      max-width: 80%;
+      padding: 10px 14px;
+      border-radius: 16px;
+      position: relative;
+      word-wrap: break-word;
+      font-size: 14px;
+      line-height: 1.45;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .message-row.sent .message-bubble {
+      background: var(--msg-sent);
+      color: #ffffff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message-row.received .message-bubble {
+      background: var(--msg-received);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-bottom-left-radius: 4px;
+    }
+
+    .sender-name-tag {
+      font-size: 11px;
+      font-weight: 700;
+      color: #93c5fd;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .media-bubble-wrap {
+      position: relative;
+      margin-bottom: 6px;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .media-bubble-wrap img, .media-bubble-wrap video {
+      max-width: 100%;
+      max-height: 280px;
+      border-radius: 10px;
+      display: block;
+      cursor: pointer;
+    }
+
+    .media-download-btn {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(10, 10, 15, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: gap;
+      cursor: pointer;
+      text-decoration: none;
+      backdrop-filter: blur(6px);
+      min-height: 30px;
+    }
+
+    .message-meta {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 4px;
+    }
+
+    .message-row.received .message-meta {
+      color: var(--text-muted);
+    }
+
+    .read-ticks {
+      display: inline-flex;
+      align-items: center;
+      color: #93c5fd;
+      font-weight: bold;
+    }
+
+    .typing-box {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 14px;
+      background: var(--bg-card);
+      border-radius: 14px;
+      width: fit-content;
+      margin-bottom: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    .typing-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+      animation: bounce 1.2s infinite;
+    }
+
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-5px); }
+    }
+
+    .chat-footer {
+      padding: 10px 14px;
+      background: var(--bg-sidebar);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 5;
+      min-height: 62px;
+    }
+
+    .attach-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 40px;
+      min-height: 40px;
+    }
+
+    .message-input-wrap {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      padding: 4px 12px;
+      min-height: 42px;
+    }
+
+    .message-input-wrap:focus-within {
+      border-color: var(--primary);
+    }
+
+    .message-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-size: 16px;
+      outline: none;
+      padding: 6px 0;
+    }
+
+    .send-btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px var(--primary-glow);
+      flex-shrink: 0;
+    }
+
+    /* MODALS */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(5px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 16px;
+    }
+
+    .modal-content {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 85vh;
+      max-height: 85dvh;
+      overflow-y: auto;
+      padding: 24px 20px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+      position: relative;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .modal-title { font-size: 17px; font-weight: 700; }
+
+    .close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 26px;
+      line-height: 1;
+      padding: 4px;
+    }
+
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
+
+    .form-input {
+      width: 100%;
+      padding: 11px 14px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: var(--text-main);
+      font-size: 16px;
+      outline: none;
+    }
+
+    .form-input:focus { border-color: var(--primary); }
+
+    .friends-checklist {
+      max-height: 160px;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 8px;
+      background: var(--bg-input);
+    }
+
+    .friend-check-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      min-height: 40px;
+    }
+
+    .color-picker-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .color-swatch { width: 34px; height: 34px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+    .color-swatch.active { border-color: #ffffff; transform: scale(1.15); }
+
+    .duration-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .duration-chip {
+      padding: 7px 14px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .duration-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    /* STORY VIEWER */
+    .story-viewer-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      background: #000;
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .story-card-viewport {
+      width: 100%;
+      max-width: 440px;
+      height: 100%;
+      max-height: 100dvh;
+      background: #111;
+      border-radius: 0;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    @media (min-width: 600px) {
+      .story-card-viewport {
+        border-radius: 20px;
+        height: 85vh;
+        max-height: 800px;
+      }
+    }
+
+    .story-progress-bar-container {
+      display: flex;
+      gap: 4px;
+      padding: 12px 14px 6px 14px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 10;
+    }
+
+    .story-progress-bar {
+      flex: 1;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .story-progress-fill {
+      height: 100%;
+      width: 0%;
+      background: #ffffff;
+    }
+
+    .story-top-header {
+      position: absolute;
+      top: 22px;
+      left: 0;
+      width: 100%;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+    }
+
+    .story-author {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .story-author-img {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid #fff;
+    }
+
+    .story-author-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    }
+
+    .story-time-ago {
+      font-size: 11px;
+      color: rgba(255,255,255,0.8);
+    }
+
+    .story-content-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      position: relative;
+    }
+
+    .story-text-display {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.5;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+      word-break: break-word;
+    }
+
+    .story-media-display {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .story-nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0, 0, 0, 0.4);
+      border: none;
+      color: #fff;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 15;
+    }
+
+    .story-nav-prev { left: 8px; }
+    .story-nav-next { right: 8px; }
+
+    .story-footer-bar {
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+    }
+
+    .views-counter-btn {
+      background: transparent;
+      border: none;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .image-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      background: rgba(0, 0, 0, 0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 150;
+      padding: 16px;
+    }
+
+    .image-modal img {
+      max-width: 95%;
+      max-height: 90%;
+      border-radius: 8px;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        max-width: 100%;
+        border-right: none;
+      }
+
+      .chat-view {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        height: 100dvh;
+        transform: translateX(100%);
+        transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        z-index: 20;
+      }
+
+      .chat-view.active-mobile {
+        transform: translateX(0);
+      }
+
+      .back-to-list-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .message-bubble {
+        max-width: 86%;
+      }
+
+      .modal-backdrop {
+        padding: 0;
+        align-items: flex-end;
+      }
+
+      .modal-content {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        max-height: 90vh;
+        max-height: 90dvh;
+        padding-bottom: max(20px, env(safe-area-inset-bottom));
+      }
+    }
+
+    @media (min-width: 769px) and (max-width: 1024px) {
+      .sidebar { width: 320px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="profile.html" class="user-profile-badge" title="Mon Profil">
+          <div class="user-avatar-wrap">
+            <img id="myAvatarImg" class="avatar-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23888'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="Avatar">
+            <span class="online-indicator"></span>
+          </div>
+          <div class="user-info-text">
+            <span class="user-name" id="myUsername">Chargement...</span>
+            <span class="user-status-short" id="myStatus">En ligne</span>
+          </div>
+        </a>
+
+        <div class="sidebar-actions">
+          <a href="profile.html" class="icon-btn" title="Paramètres">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          </a>
+          <button class="icon-btn" onclick="logout()" title="Déconnexion">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="search-box-container">
+        <div class="search-input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="globalSearchInput" class="search-input" placeholder="Rechercher..." oninput="handleSearchInput(event)">
+        </div>
+      </div>
+
+      <div class="sidebar-tabs">
+        <div class="tab-item active" id="tabChats" onclick="switchSidebarTab('chats')">
+          <span>💬 Chats</span>
+        </div>
+        <div class="tab-item" id="tabGroups" onclick="switchSidebarTab('groups')">
+          <span>👥 Groupes</span>
+        </div>
+        <div class="tab-item" id="tabStatuses" onclick="switchSidebarTab('statuses')">
+          <span>📸 Statuts</span>
+        </div>
+        <div class="tab-item" id="tabFriends" onclick="switchSidebarTab('friends')">
+          <span>👤 Amis</span>
+          <span class="tab-badge" id="friendReqCount" style="display:none;">0</span>
+        </div>
+      </div>
+
+      <div class="sidebar-content" id="sidebarContent"></div>
+    </aside>
+
+    <!-- ZONE DE CHAT -->
+    <main class="chat-view" id="chatView">
+      <div class="empty-chat-state" id="emptyChatState">
+        <div class="empty-chat-logo">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.82.49 3.53 1.34 5L2 22l5.24-1.31C8.67 21.49 10.29 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
+        </div>
+        <h2>Dark Link Messagerie</h2>
+        <p>Sélectionnez une discussion ou consultez les statuts.</p>
+      </div>
+
+      <div class="chat-header" id="activeChatHeader" style="display: none;">
+        <div class="chat-header-user" onclick="handleHeaderDetailsClick()">
+          <button class="back-to-list-btn" onclick="event.stopPropagation(); closeActiveChatOnMobile()" title="Retour">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <div class="user-avatar-wrap">
+            <img id="activeChatAvatar" class="avatar-img" src="" alt="Avatar">
+            <span class="online-indicator" id="activeChatOnlineDot"></span>
+          </div>
+          <div class="chat-header-info">
+            <h3 id="activeChatTitle">Discussion</h3>
+            <div class="chat-header-status" id="activeChatSubtitle">
+              <span class="status-dot-sm" id="activeStatusDot"></span>
+              <span id="activeStatusLabel">Hors ligne</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="groupHeaderActions" style="display: none;">
+          <button class="icon-btn" onclick="openGroupDetailsModal()" title="Infos du groupe">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="messages-container" id="messagesContainer" style="display: none;">
+        <div class="typing-box" id="typingBox">
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+        </div>
+      </div>
+
+      <div class="chat-footer" id="activeChatFooter" style="display: none;">
+        <input type="file" id="mediaFileInput" accept="image/*,video/*" style="display: none;" onchange="handleMediaSend(event)">
+        <button class="attach-btn" title="Joindre un fichier" onclick="document.getElementById('mediaFileInput').click()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+        </button>
+
+        <div class="message-input-wrap">
+          <input type="text" id="messageInput" class="message-input" placeholder="Message..." autocomplete="off" onkeydown="handleInputKey(event)" oninput="handleTypingEvent()">
+        </div>
+
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Envoyer">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL NOUVEAU GROUPE -->
+  <div class="modal-backdrop" id="createGroupModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Nouveau Groupe</h3>
+        <button class="close-btn" onclick="closeModal('createGroupModal')">&times;</button>
+      </div>
+      <form onsubmit="handleCreateGroupSubmit(event)">
+        <div class="form-group">
+          <label class="form-label" for="groupNameInput">Nom du groupe</label>
+          <input type="text" id="groupNameInput" class="form-input" placeholder="ex: Amis Dark Link" required minlength="2">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sélectionner des membres</label>
+          <div class="friends-checklist" id="groupFriendsChecklist"></div>
+        </div>
+        <button type="submit" class="btn-create-action" style="width: 100%; margin-top: 10px;">
+          Créer le groupe
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL INFOS GROUPE -->
+  <div class="modal-backdrop" id="groupDetailsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="gdGroupName">Infos Groupe</h3>
+        <button class="close-btn" onclick="closeModal('groupDetailsModal')">&times;</button>
+      </div>
+      <div style="text-align: center; margin-bottom: 16px;">
+        <img id="gdGroupAvatar" class="avatar-img" style="width: 64px; height: 64px; margin: 0 auto 6px;" src="" alt="Avatar">
+        <div id="gdMemberCount" style="font-size: 13px; color: var(--text-muted);">0 membre</div>
+      </div>
+      <div class="section-title">Membres</div>
+      <div id="gdMembersList" style="margin-bottom: 16px;"></div>
+
+      <button type="button" class="action-btn-sm btn-reject" style="width: 100%; padding: 10px;" onclick="handleLeaveGroup()">
+        🚪 Quitter le groupe
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL NOUVEAU STATUT -->
+  <div class="modal-backdrop" id="createStatusModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Nouveau Statut</h3>
+        <button class="close-btn" onclick="closeModal('createStatusModal')">&times;</button>
+      </div>
+
+      <div style="display: flex; gap: 6px; margin-bottom: 14px;">
+        <button type="button" class="tab-item active" id="stModeTextBtn" onclick="switchStatusMode('text')">📝 Texte</button>
+        <button type="button" class="tab-item" id="stModeMediaBtn" onclick="switchStatusMode('media')">🖼️ Média</button>
+      </div>
+
+      <div id="statusTextModeSection">
+        <div class="form-group">
+          <label class="form-label">Votre texte</label>
+          <textarea id="statusTextInput" class="form-input" rows="3" placeholder="Écrivez votre message..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Arrière-plan</label>
+          <div class="color-picker-row">
+            <div class="color-swatch active" style="background: linear-gradient(135deg, #1a6eff, #0d3b8f);" onclick="selectStatusBg(this, 'linear-gradient(135deg, #1a6eff, #0d3b8f)')"></div>
+            <div class="color-swatch" style="background: linear-gradient(135deg, #8b5cf6, #ec4899);" onclick="selectStatusBg(this, 'linear-gradient(135deg, #8b5cf6, #ec4899)')"></div>
+            <div class="color-swatch" style="background: linear-gradient(135deg, #10b981, #065f46);" onclick="selectStatusBg(this, 'linear-gradient(135deg, #10b981, #065f46)')"></div>
+            <div class="color-swatch" style="background: linear-gradient(135deg, #f59e0b, #b45309);" onclick="selectStatusBg(this, 'linear-gradient(135deg, #f59e0b, #b45309)')"></div>
+            <div class="color-swatch" style="background: linear-gradient(135deg, #18181b, #27272a);" onclick="selectStatusBg(this, 'linear-gradient(135deg, #18181b, #27272a)')"></div>
+            <div class="color-swatch" style="background: linear-gradient(135deg, #06b6d4, #0284c7);" onclick="selectStatusBg(this, 'linear-gradient(135deg, #06b6d4, #0284c7)')"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="statusMediaModeSection" style="display: none;">
+        <div class="form-group">
+          <label class="form-label">Photo ou Vidéo</label>
+          <input type="file" id="statusFileInput" class="form-input" accept="image/*,video/*">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Légende</label>
+          <input type="text" id="statusMediaCaption" class="form-input" placeholder="Légende optionnelle...">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Durée de visibilité</label>
+        <div class="duration-chips">
+          <span class="duration-chip" onclick="selectDuration(this, 1)">1h</span>
+          <span class="duration-chip" onclick="selectDuration(this, 2)">2h</span>
+          <span class="duration-chip" onclick="selectDuration(this, 6)">6h</span>
+          <span class="duration-chip" onclick="selectDuration(this, 12)">12h</span>
+          <span class="duration-chip active" onclick="selectDuration(this, 24)">24h</span>
+          <span class="duration-chip" onclick="selectDuration(this, 48)">48h</span>
+        </div>
+      </div>
+
+      <button type="button" class="btn-create-action" style="width: 100%; margin-top: 10px;" id="publishStatusBtn" onclick="handlePublishStatus()">
+        Publier
+      </button>
+    </div>
+  </div>
+
+  <!-- STORY VIEWER -->
+  <div class="story-viewer-modal" id="storyViewerModal">
+    <div class="story-card-viewport" id="storyCardViewport">
+      <div class="story-progress-bar-container" id="storyProgressBarContainer"></div>
+
+      <div class="story-top-header">
+        <div class="story-author">
+          <img id="storyAuthorImg" class="story-author-img" src="" alt="Avatar">
+          <div>
+            <div class="story-author-name" id="storyAuthorName">Auteur</div>
+            <div class="story-time-ago" id="storyTimeAgo">...</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="icon-btn" id="storyDeleteBtn" style="display: none; color: #ef4444;" onclick="handleDeleteCurrentStatus()" title="Supprimer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+          <button class="icon-btn" onclick="closeStoryViewer()" title="Fermer">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="story-nav-btn story-nav-prev" onclick="prevStory()">‹</button>
+      <button class="story-nav-btn story-nav-next" onclick="nextStory()">›</button>
+
+      <div class="story-content-body" id="storyContentBody"></div>
+
+      <div class="story-footer-bar" id="storyFooterBar" style="display: none;">
+        <button class="views-counter-btn" id="storyViewsBtn" onclick="showStoryViewers()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          <span id="storyViewsText">0 vue</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="image-modal" id="imageModal" onclick="this.style.display='none'">
+    <img id="modalImg" src="" alt="Agrandissement">
+  </div>
+
+  <script>
+    let socket = null;
+    let currentUser = null;
+    let authToken = null;
+    let currentChat = null;
+    let activeTab = 'chats';
+    let friendsList = [];
+    let groupsList = [];
+    let statusesFeed = [];
+    let friendRequests = [];
+    let searchResults = [];
+
+    let statusMode = 'text';
+    let selectedBgColor = 'linear-gradient(135deg, #1a6eff, #0d3b8f)';
+    let selectedDurationHours = 24;
+
+    let currentStoryUserIndex = 0;
+    let currentStoryItemIndex = 0;
+    let storyTimer = null;
+
+    // Helper pour envoyer le header Authorization sur toutes les requêtes sécurisées
+    function authFetch(url, options = {}) {
+      const headers = options.headers ? { ...options.headers } : {};
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      return fetch(url, { ...options, headers });
+    }
+
+    function init() {
+      const stored = localStorage.getItem('dark_link_user');
+      authToken = localStorage.getItem('dark_link_token');
+
+      if (!stored) {
+        window.location.href = 'index.html';
+        return;
+      }
+      currentUser = JSON.parse(stored);
+
+      document.getElementById('myUsername').textContent = currentUser.username || 'Moi';
+      document.getElementById('myStatus').textContent = currentUser.status_message || 'En ligne';
+      if (currentUser.profile_pic) {
+        document.getElementById('myAvatarImg').src = currentUser.profile_pic;
+      }
+
+      setupSocket();
+      loadFriends();
+      loadGroups();
+      loadStatuses();
+      loadFriendRequests();
+    }
+
+    function setupSocket() {
+      // Connexion Socket.io avec transmission du token JWT pour vérification
+      socket = io({
+        auth: { token: authToken }
+      });
+
+      socket.on('connect', () => {
+        socket.emit('join', currentUser.id);
+      });
+
+      socket.on('receive_message', (msg) => {
+        if (currentChat && currentChat.type === 'direct' && Number(msg.sender_id) === Number(currentChat.id)) {
+          appendMessage(msg, 'received');
+          scrollToBottom();
+          markMessagesAsRead(currentChat.id);
+        } else {
+          loadFriends();
+        }
+      });
+
+      socket.on('message_sent_confirm', (msg) => {
+        if (currentChat && currentChat.type === 'direct' && Number(msg.receiver_id) === Number(currentChat.id)) {
+          appendMessage(msg, 'sent');
+          scrollToBottom();
+        }
+        loadFriends();
+      });
+
+      socket.on('receive_group_message', (msg) => {
+        if (currentChat && currentChat.type === 'group' && Number(msg.group_id) === Number(currentChat.id)) {
+          const type = Number(msg.sender_id) === Number(currentUser.id) ? 'sent' : 'received';
+          appendMessage(msg, type, true);
+          scrollToBottom();
+        }
+        loadGroups();
+      });
+
+      socket.on('messages_read_ack', (data) => {
+        if (currentChat && currentChat.type === 'direct' && Number(data.readBy) === Number(currentChat.id)) {
+          document.querySelectorAll('.read-ticks').forEach(t => t.textContent = '✓✓');
+        }
+      });
+
+      socket.on('user_status', (data) => {
+        const f = friendsList.find(x => Number(x.id) === Number(data.userId));
+        if (f) f.is_online = data.is_online;
+        if (currentChat && currentChat.type === 'direct' && Number(currentChat.id) === Number(data.userId)) {
+          currentChat.data.is_online = data.is_online;
+          updateActiveDirectHeaderStatus();
+        }
+        if (activeTab === 'chats') renderChatsList();
+      });
+
+      socket.on('typing_indicator', (data) => {
+        if (currentChat && currentChat.type === 'direct' && Number(data.sender_id) === Number(currentChat.id)) {
+          const typingBox = document.getElementById('typingBox');
+          const statusLabel = document.getElementById('activeStatusLabel');
+          if (data.isTyping) {
+            typingBox.style.display = 'flex';
+            statusLabel.textContent = "Écrit...";
+            scrollToBottom();
+          } else {
+            typingBox.style.display = 'none';
+            statusLabel.textContent = currentChat.data.is_online ? 'En ligne' : 'Hors ligne';
+          }
+        }
+      });
+
+      socket.on('group_typing_indicator', (data) => {
+        if (currentChat && currentChat.type === 'group' && Number(data.group_id) === Number(currentChat.id)) {
+          const typingBox = document.getElementById('typingBox');
+          const statusLabel = document.getElementById('activeStatusLabel');
+          if (data.isTyping) {
+            typingBox.style.display = 'flex';
+            statusLabel.textContent = `${data.sender_name || 'Un membre'} écrit...`;
+            scrollToBottom();
+          } else {
+            typingBox.style.display = 'none';
+            statusLabel.textContent = `${currentChat.data.members_count || 0} membres`;
+          }
+        }
+      });
+
+      socket.on('new_status_alert', () => loadStatuses());
+      socket.on('added_to_group', () => loadGroups());
+      socket.on('friend_request_received', () => loadFriendRequests());
+      socket.on('friend_request_accepted', () => { loadFriends(); loadFriendRequests(); });
+    }
+
+    function switchSidebarTab(tab) {
+      activeTab = tab;
+      ['tabChats', 'tabGroups', 'tabStatuses', 'tabFriends'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.classList.remove('active');
+      });
+      const activeBtn = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      document.getElementById('globalSearchInput').value = '';
+
+      if (tab === 'chats') renderChatsList();
+      else if (tab === 'groups') renderGroupsList();
+      else if (tab === 'statuses') renderStatusesList();
+      else if (tab === 'friends') renderFriendsAndRequestsTab();
+    }
+
+    async function loadFriends() {
+      try {
+        const res = await authFetch(`/api/friends/${currentUser.id}`);
+        if (res.ok) {
+          friendsList = await res.json();
+          if (activeTab === 'chats') renderChatsList();
+        }
+      } catch (e) {}
+    }
+
+    function renderChatsList() {
+      const container = document.getElementById('sidebarContent');
+      container.innerHTML = '';
+
+      if (friendsList.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 13px;">
+            <p style="margin-bottom: 8px;">Aucune discussion.</p>
+            <p>Ajoutez des contacts dans l'onglet <strong>👤 Amis</strong>.</p>
+          </div>
+        `;
+        return;
+      }
+
+      friendsList.forEach(friend => {
+        const item = document.createElement('div');
+        const isActive = currentChat && currentChat.type === 'direct' && Number(currentChat.id) === Number(friend.id);
+        item.className = `chat-item ${isActive ? 'active' : ''}`;
+        item.onclick = () => selectDirectChat(friend);
+
+        const avatar = friend.profile_pic || defaultAvatar();
+        const timeFormatted = friend.last_message_time ? formatChatTime(friend.last_message_time) : '';
+        const unreadCount = Number(friend.unread_count) || 0;
+        let lastMsgText = friend.last_message || 'Nouvelle amitié';
+        if (friend.last_media_type === 'image') lastMsgText = '📷 Photo';
+        else if (friend.last_media_type === 'video') lastMsgText = '🎥 Vidéo';
+
+        item.innerHTML = `
+          <div class="chat-item-avatar">
+            <img class="avatar-img" src="${avatar}" alt="Avatar">
+            <span class="online-indicator ${friend.is_online ? '' : 'offline'}"></span>
+          </div>
+          <div class="chat-item-details">
+            <div class="chat-item-top">
+              <span class="chat-item-name">${escapeHtml(friend.username)}</span>
+              <span class="chat-item-time">${timeFormatted}</span>
+            </div>
+            <div class="chat-item-bottom">
+              <span class="chat-item-snippet">${escapeHtml(lastMsgText)}</span>
+              ${unreadCount > 0 ? `<span class="unread-pill">${unreadCount}</span>` : ''}
+            </div>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    async function selectDirectChat(friend) {
+      if (currentChat && currentChat.type === 'group') {
+        socket.emit('leave_group', currentChat.id);
+      }
+
+      currentChat = { type: 'direct', id: friend.id, data: friend };
+      setupChatViewUI();
+
+      document.getElementById('activeChatTitle').textContent = friend.username;
+      document.getElementById('activeChatAvatar').src = friend.profile_pic || defaultAvatar();
+      document.getElementById('groupHeaderActions').style.display = 'none';
+      updateActiveDirectHeaderStatus();
+
+      renderChatsList();
+      await loadDirectMessageHistory(friend.id);
+      markMessagesAsRead(friend.id);
+    }
+
+    function updateActiveDirectHeaderStatus() {
+      if (!currentChat || currentChat.type !== 'direct') return;
+      const isOnline = Boolean(currentChat.data.is_online);
+      document.getElementById('activeChatOnlineDot').className = `online-indicator ${isOnline ? '' : 'offline'}`;
+      document.getElementById('activeStatusDot').className = `status-dot-sm ${isOnline ? '' : 'offline'}`;
+      document.getElementById('activeStatusLabel').textContent = isOnline ? 'En ligne' : 'Hors ligne';
+    }
+
+    async function loadDirectMessageHistory(contactId) {
+      const container = document.getElementById('messagesContainer');
+      const typingBox = document.getElementById('typingBox');
+      container.innerHTML = '';
+      container.appendChild(typingBox);
+
+      try {
+        const res = await authFetch(`/api/messages/${currentUser.id}/${contactId}`);
+        if (res.ok) {
+          const messages = await res.json();
+          messages.forEach(msg => {
+            const type = Number(msg.sender_id) === Number(currentUser.id) ? 'sent' : 'received';
+            appendMessage(msg, type, false);
+          });
+          scrollToBottom();
+        }
+      } catch (err) {}
+    }
+
+    async function loadGroups() {
+      try {
+        const res = await authFetch(`/api/groups/user/${currentUser.id}`);
+        if (res.ok) {
+          groupsList = await res.json();
+          if (activeTab === 'groups') renderGroupsList();
+        }
+      } catch (e) {}
+    }
+
+    function renderGroupsList() {
+      const container = document.getElementById('sidebarContent');
+      container.innerHTML = '';
+
+      const banner = document.createElement('div');
+      banner.className = 'create-group-banner';
+      banner.onclick = openCreateGroupModal;
+      banner.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:36px; height:36px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; color:#fff; font-size:18px;">➕</div>
+          <div>
+            <strong style="font-size:13px;">Créer un groupe</strong>
+            <div style="font-size:11px; color:var(--text-muted);">Discussions à plusieurs</div>
+          </div>
+        </div>
+        <button class="btn-create-action">Nouveau</button>
+      `;
+      container.appendChild(banner);
+
+      if (groupsList.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'text-align: center; padding: 30px 20px; color: var(--text-muted); font-size: 13px;';
+        empty.textContent = "Aucun groupe pour le moment.";
+        container.appendChild(empty);
+        return;
+      }
+
+      groupsList.forEach(group => {
+        const item = document.createElement('div');
+        const isActive = currentChat && currentChat.type === 'group' && Number(currentChat.id) === Number(group.id);
+        item.className = `chat-item ${isActive ? 'active' : ''}`;
+        item.onclick = () => selectGroupChat(group);
+
+        const avatar = group.group_pic || defaultGroupAvatar();
+        const timeFormatted = group.last_message_time ? formatChatTime(group.last_message_time) : '';
+        let lastMsgText = group.last_message ? `${group.last_sender_name || ''}: ${group.last_message}` : 'Groupe créé';
+
+        item.innerHTML = `
+          <div class="chat-item-avatar">
+            <img class="avatar-img" src="${avatar}" alt="Avatar">
+          </div>
+          <div class="chat-item-details">
+            <div class="chat-item-top">
+              <span class="chat-item-name">${escapeHtml(group.name)}</span>
+              <span class="chat-item-time">${timeFormatted}</span>
+            </div>
+            <div class="chat-item-bottom">
+              <span class="chat-item-snippet">${escapeHtml(lastMsgText)}</span>
+              <span style="font-size: 11px; color: var(--text-muted);">${group.members_count || 1}👥</span>
+            </div>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    async function selectGroupChat(group) {
+      if (currentChat && currentChat.type === 'group') {
+        socket.emit('leave_group', currentChat.id);
+      }
+
+      currentChat = { type: 'group', id: group.id, data: group };
+      socket.emit('join_group', group.id);
+      setupChatViewUI();
+
+      document.getElementById('activeChatTitle').textContent = group.name;
+      document.getElementById('activeChatAvatar').src = group.group_pic || defaultGroupAvatar();
+      document.getElementById('activeChatOnlineDot').className = 'online-indicator offline';
+      document.getElementById('activeStatusDot').className = 'status-dot-sm';
+      document.getElementById('activeStatusLabel').textContent = `${group.members_count || 1} membres`;
+      document.getElementById('groupHeaderActions').style.display = 'block';
+
+      renderGroupsList();
+      await loadGroupMessageHistory(group.id);
+    }
+
+    async function loadGroupMessageHistory(groupId) {
+      const container = document.getElementById('messagesContainer');
+      const typingBox = document.getElementById('typingBox');
+      container.innerHTML = '';
+      container.appendChild(typingBox);
+
+      try {
+        const res = await authFetch(`/api/groups/${groupId}/messages`);
+        if (res.ok) {
+          const messages = await res.json();
+          messages.forEach(msg => {
+            const type = Number(msg.sender_id) === Number(currentUser.id) ? 'sent' : 'received';
+            appendMessage(msg, type, true);
+          });
+          scrollToBottom();
+        }
+      } catch (err) {}
+    }
+
+    function openCreateGroupModal() {
+      const list = document.getElementById('groupFriendsChecklist');
+      list.innerHTML = '';
+
+      if (friendsList.length === 0) {
+        list.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px;">Ajoutez des amis avant de créer un groupe.</div>';
+      } else {
+        friendsList.forEach(f => {
+          const item = document.createElement('label');
+          item.className = 'friend-check-item';
+          item.innerHTML = `
+            <input type="checkbox" value="${f.id}" name="group_friend">
+            <img src="${f.profile_pic || defaultAvatar()}" style="width:28px;height:28px;border-radius:50%;">
+            <span style="font-size:13px;">${escapeHtml(f.username)}</span>
+          `;
+          list.appendChild(item);
+        });
+      }
+      document.getElementById('createGroupModal').style.display = 'flex';
+    }
+
+    async function handleCreateGroupSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('groupNameInput').value.trim();
+      const checkboxes = document.querySelectorAll('input[name="group_friend"]:checked');
+      const memberIds = Array.from(checkboxes).map(cb => Number(cb.value));
+
+      try {
+        const res = await authFetch('/api/groups', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, created_by: currentUser.id, member_ids: memberIds })
+        });
+        if (res.ok) {
+          closeModal('createGroupModal');
+          document.getElementById('groupNameInput').value = '';
+          await loadGroups();
+        }
+      } catch(e) { alert('Erreur création groupe'); }
+    }
+
+    async function openGroupDetailsModal() {
+      if (!currentChat || currentChat.type !== 'group') return;
+      try {
+        const res = await authFetch(`/api/groups/${currentChat.id}/details`);
+        if (res.ok) {
+          const group = await res.json();
+          document.getElementById('gdGroupName').textContent = group.name;
+          document.getElementById('gdGroupAvatar').src = group.group_pic || defaultGroupAvatar();
+          document.getElementById('gdMemberCount').textContent = `${group.members.length} membres`;
+
+          const list = document.getElementById('gdMembersList');
+          list.innerHTML = '';
+
+          const myMembership = group.members.find(m => Number(m.id) === Number(currentUser.id));
+          const isMeAdmin = myMembership && myMembership.role === 'admin';
+
+          group.members.forEach(m => {
+            const card = document.createElement('div');
+            card.className = 'friend-req-card';
+            const isAdmin = m.role === 'admin';
+
+            let adminActions = '';
+            if (isMeAdmin && Number(m.id) !== Number(currentUser.id)) {
+              adminActions = `
+                <div style="display: flex; gap: 4px;">
+                  <button class="action-btn-sm btn-accept" onclick="toggleMemberAdmin(${group.id}, ${m.id}, '${isAdmin ? 'member' : 'admin'}')">
+                    ${isAdmin ? 'Rétrograder' : 'Admin'}
+                  </button>
+                  <button class="action-btn-sm btn-reject" onclick="kickMember(${group.id}, ${m.id})">Expulser</button>
+                </div>
+              `;
+            }
+
+            card.innerHTML = `
+              <div class="req-user-info">
+                <img src="${m.profile_pic || defaultAvatar()}" style="width:34px;height:34px;border-radius:50%;">
+                <div>
+                  <div style="font-size:13px; font-weight:600;">
+                    ${escapeHtml(m.username)} ${Number(m.id) === Number(currentUser.id) ? '(Moi)' : ''}
+                  </div>
+                  <div style="font-size:11px; color:${isAdmin ? 'var(--gold)' : 'var(--text-muted)'}; font-weight:600;">
+                    ${isAdmin ? '👑 Administrateur' : 'Membre'}
+                  </div>
+                </div>
+              </div>
+              <div>${adminActions}</div>
+            `;
+            list.appendChild(card);
+          });
+
+          document.getElementById('groupDetailsModal').style.display = 'flex';
+        }
+      } catch(e) {}
+    }
+
+    async function toggleMemberAdmin(groupId, targetUserId, newRole) {
+      try {
+        await authFetch(`/api/groups/${groupId}/role`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requesterId: currentUser.id, targetUserId, newRole })
+        });
+        openGroupDetailsModal();
+      } catch (e) { alert('Erreur rôle'); }
+    }
+
+    async function kickMember(groupId, targetUserId) {
+      if (!confirm('Expulser ce membre ?')) return;
+      try {
+        await authFetch(`/api/groups/${groupId}/members/${targetUserId}?requesterId=${currentUser.id}`, { method: 'DELETE' });
+        openGroupDetailsModal();
+      } catch (e) { alert('Erreur expulsion'); }
+    }
+
+    async function handleLeaveGroup() {
+      if (!confirm('Quitter ce groupe ?')) return;
+      try {
+        await authFetch(`/api/groups/${currentChat.id}/members/${currentUser.id}?requesterId=${currentUser.id}`, { method: 'DELETE' });
+        closeModal('groupDetailsModal');
+        currentChat = null;
+        document.getElementById('emptyChatState').style.display = 'flex';
+        document.getElementById('activeChatHeader').style.display = 'none';
+        document.getElementById('messagesContainer').style.display = 'none';
+        document.getElementById('activeChatFooter').style.display = 'none';
+        closeActiveChatOnMobile();
+        loadGroups();
+      } catch (e) { alert('Erreur sortie'); }
+    }
+
+    async function loadStatuses() {
+      try {
+        const res = await authFetch(`/api/statuses/feed/${currentUser.id}`);
+        if (res.ok) {
+          statusesFeed = await res.json();
+          if (activeTab === 'statuses') renderStatusesList();
+        }
+      } catch (e) {}
+    }
+
+    function renderStatusesList() {
+      const container = document.getElementById('sidebarContent');
+      container.innerHTML = '';
+
+      const myFeed = statusesFeed.find(u => u.is_me);
+      const myItem = document.createElement('div');
+      myItem.className = 'status-user-item';
+      const myAvatar = currentUser.profile_pic || defaultAvatar();
+
+      myItem.innerHTML = `
+        <div class="story-ring-wrap ${myFeed && myFeed.statuses.length > 0 ? 'has-new' : ''}" onclick="handleClickMyStory(${myFeed ? 'true' : 'false'})">
+          <img src="${myAvatar}" alt="Avatar">
+          <span class="add-status-plus" onclick="event.stopPropagation(); openCreateStatusModal()">+</span>
+        </div>
+        <div style="flex:1;" onclick="handleClickMyStory(${myFeed ? 'true' : 'false'})">
+          <strong style="font-size:14px;">Mon statut</strong>
+          <div style="font-size:12px; color:var(--text-muted);">
+            ${myFeed && myFeed.statuses.length > 0 ? `${myFeed.statuses.length} statut(s)` : 'Ajouter un statut'}
+          </div>
+        </div>
+        <button class="action-btn-sm btn-accept" onclick="openCreateStatusModal()">Ajouter</button>
+      `;
+      container.appendChild(myItem);
+
+      const friendsStatuses = statusesFeed.filter(u => !u.is_me);
+      const title = document.createElement('div');
+      title.className = 'section-title';
+      title.textContent = `Statuts récents (${friendsStatuses.length})`;
+      container.appendChild(title);
+
+      if (friendsStatuses.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'text-align: center; padding: 20px; color: var(--text-muted); font-size: 13px;';
+        empty.textContent = 'Aucun statut récent.';
+        container.appendChild(empty);
+        return;
+      }
+
+      friendsStatuses.forEach((userFeed, idx) => {
+        const item = document.createElement('div');
+        item.className = 'status-user-item';
+        const uIndexInFeed = statusesFeed.findIndex(u => u.user_id === userFeed.user_id);
+        item.onclick = () => openStoryViewer(uIndexInFeed, 0);
+
+        const avatar = userFeed.profile_pic || defaultAvatar();
+        const latestTime = userFeed.statuses[0] ? formatChatTime(userFeed.statuses[0].created_at) : '';
+
+        item.innerHTML = `
+          <div class="story-ring-wrap ${userFeed.all_viewed ? '' : 'has-new'}">
+            <img src="${avatar}" alt="Avatar">
+          </div>
+          <div style="flex:1;">
+            <strong style="font-size:14px;">${escapeHtml(userFeed.username)}</strong>
+            <div style="font-size:12px; color:var(--text-muted);">${latestTime}</div>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function handleClickMyStory(hasStatuses) {
+      if (hasStatuses) {
+        const myIndex = statusesFeed.findIndex(u => u.is_me);
+        if (myIndex !== -1) openStoryViewer(myIndex, 0);
+      } else {
+        openCreateStatusModal();
+      }
+    }
+
+    function openCreateStatusModal() {
+      document.getElementById('createStatusModal').style.display = 'flex';
+    }
+
+    function switchStatusMode(mode) {
+      statusMode = mode;
+      document.getElementById('stModeTextBtn').className = `tab-item ${mode === 'text' ? 'active' : ''}`;
+      document.getElementById('stModeMediaBtn').className = `tab-item ${mode === 'media' ? 'active' : ''}`;
+      document.getElementById('statusTextModeSection').style.display = mode === 'text' ? 'block' : 'none';
+      document.getElementById('statusMediaModeSection').style.display = mode === 'media' ? 'block' : 'none';
+    }
+
+    function selectStatusBg(el, gradient) {
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+      el.classList.add('active');
+      selectedBgColor = gradient;
+    }
+
+    function selectDuration(el, hours) {
+      document.querySelectorAll('.duration-chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      selectedDurationHours = hours;
+    }
+
+    async function handlePublishStatus() {
+      const btn = document.getElementById('publishStatusBtn');
+      btn.disabled = true;
+      btn.textContent = 'Publication...';
+
+      let mediaUrl = null;
+      let mediaType = 'text';
+      let content = '';
+
+      if (statusMode === 'text') {
+        content = document.getElementById('statusTextInput').value.trim();
+        if (!content) {
+          alert('Veuillez saisir un texte.');
+          btn.disabled = false;
+          btn.textContent = 'Publier';
+          return;
+        }
+      } else {
+        const file = document.getElementById('statusFileInput').files[0];
+        if (!file) {
+          alert('Veuillez sélectionner un fichier.');
+          btn.disabled = false;
+          btn.textContent = 'Publier';
+          return;
+        }
+        content = document.getElementById('statusMediaCaption').value.trim();
+        
+        const formData = new FormData();
+        formData.append('media', file);
+        try {
+          const upRes = await fetch('/api/upload/media', { method: 'POST', body: formData });
+          const upData = await upRes.json();
+          if (upRes.ok && upData.mediaUrl) {
+            mediaUrl = upData.mediaUrl;
+            mediaType = upData.mediaType || 'image';
+          } else {
+            alert(upData.error || 'Format de fichier non supporté.');
+            btn.disabled = false;
+            btn.textContent = 'Publier';
+            return;
+          }
+        } catch (e) {
+          alert('Erreur téléversement.');
+          btn.disabled = false;
+          btn.textContent = 'Publier';
+          return;
+        }
+      }
+
+      try {
+        const res = await authFetch('/api/statuses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: currentUser.id,
+            content,
+            media_url: mediaUrl,
+            media_type: mediaType,
+            bg_color: selectedBgColor,
+            duration_hours: selectedDurationHours
+          })
+        });
+
+        if (res.ok) {
+          closeModal('createStatusModal');
+          document.getElementById('statusTextInput').value = '';
+          document.getElementById('statusFileInput').value = '';
+          document.getElementById('statusMediaCaption').value = '';
+          await loadStatuses();
+        }
+      } catch (err) { alert('Erreur publication.'); }
+      finally {
+        btn.disabled = false;
+        btn.textContent = 'Publier';
+      }
+    }
+
+    function openStoryViewer(userIndex, itemIndex = 0) {
+      currentStoryUserIndex = userIndex;
+      currentStoryItemIndex = itemIndex;
+      document.getElementById('storyViewerModal').style.display = 'flex';
+      renderCurrentStory();
+    }
+
+    function closeStoryViewer() {
+      clearTimeout(storyTimer);
+      document.getElementById('storyViewerModal').style.display = 'none';
+      loadStatuses();
+    }
+
+    function renderCurrentStory() {
+      clearTimeout(storyTimer);
+      const user = statusesFeed[currentStoryUserIndex];
+      if (!user || !user.statuses[currentStoryItemIndex]) {
+        closeStoryViewer();
+        return;
+      }
+
+      const status = user.statuses[currentStoryItemIndex];
+      document.getElementById('storyAuthorName').textContent = user.username;
+      document.getElementById('storyAuthorImg').src = user.profile_pic || defaultAvatar();
+      document.getElementById('storyTimeAgo').textContent = formatChatTime(status.created_at);
+
+      const delBtn = document.getElementById('storyDeleteBtn');
+      const footerBar = document.getElementById('storyFooterBar');
+      if (user.is_me) {
+        delBtn.style.display = 'flex';
+        footerBar.style.display = 'flex';
+        document.getElementById('storyViewsText').textContent = `${status.views_count || 0} vue(s)`;
+      } else {
+        delBtn.style.display = 'none';
+        footerBar.style.display = 'none';
+        authFetch(`/api/statuses/${status.id}/view`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ viewerId: currentUser.id })
+        });
+      }
+
+      const pContainer = document.getElementById('storyProgressBarContainer');
+      pContainer.innerHTML = '';
+      user.statuses.forEach((_, idx) => {
+        const bar = document.createElement('div');
+        bar.className = 'story-progress-bar';
+        const fill = document.createElement('div');
+        fill.className = 'story-progress-fill';
+        if (idx < currentStoryItemIndex) fill.style.width = '100%';
+        else if (idx === currentStoryItemIndex) {
+          setTimeout(() => { fill.style.width = '100%'; fill.style.transition = 'width 5s linear'; }, 50);
+        }
+        bar.appendChild(fill);
+        pContainer.appendChild(bar);
+      });
+
+      const body = document.getElementById('storyContentBody');
+      body.innerHTML = '';
+
+      if (status.media_url) {
+        body.style.background = '#000';
+        if (status.media_type === 'video') {
+          body.innerHTML = `<video class="story-media-display" src="${status.media_url}" autoplay playsinline></video>`;
+        } else {
+          body.innerHTML = `<img class="story-media-display" src="${status.media_url}" alt="Story">`;
+        }
+        if (status.content) {
+          const cap = document.createElement('div');
+          cap.style.cssText = 'position:absolute;bottom:20px;left:16px;right:16px;background:rgba(0,0,0,0.65);padding:8px 12px;border-radius:12px;color:#fff;font-size:14px;';
+          cap.textContent = status.content;
+          body.appendChild(cap);
+        }
+      } else {
+        body.style.background = status.bg_color || 'linear-gradient(135deg, #1a6eff, #0d3b8f)';
+        body.innerHTML = `<div class="story-text-display">${escapeHtml(status.content)}</div>`;
+      }
+
+      storyTimer = setTimeout(() => nextStory(), 5000);
+    }
+
+    function nextStory() {
+      const user = statusesFeed[currentStoryUserIndex];
+      if (user && currentStoryItemIndex + 1 < user.statuses.length) {
+        currentStoryItemIndex++;
+        renderCurrentStory();
+      } else if (currentStoryUserIndex + 1 < statusesFeed.length) {
+        currentStoryUserIndex++;
+        currentStoryItemIndex = 0;
+        renderCurrentStory();
+      } else {
+        closeStoryViewer();
+      }
+    }
+
+    function prevStory() {
+      if (currentStoryItemIndex > 0) {
+        currentStoryItemIndex--;
+        renderCurrentStory();
+      } else if (currentStoryUserIndex > 0) {
+        currentStoryUserIndex--;
+        const prevUser = statusesFeed[currentStoryUserIndex];
+        currentStoryItemIndex = prevUser.statuses.length - 1;
+        renderCurrentStory();
+      }
+    }
+
+    async function handleDeleteCurrentStatus() {
+      const user = statusesFeed[currentStoryUserIndex];
+      if (!user || !user.statuses[currentStoryItemIndex]) return;
+      const statusId = user.statuses[currentStoryItemIndex].id;
+
+      if (!confirm('Supprimer ce statut ?')) return;
+
+      try {
+        await authFetch(`/api/statuses/${statusId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: currentUser.id })
+        });
+        closeStoryViewer();
+        await loadStatuses();
+      } catch(e) { alert('Erreur suppression.'); }
+    }
+
+    async function showStoryViewers() {
+      const user = statusesFeed[currentStoryUserIndex];
+      if (!user || !user.statuses[currentStoryItemIndex]) return;
+      const statusId = user.statuses[currentStoryItemIndex].id;
+
+      try {
+        const res = await authFetch(`/api/statuses/${statusId}/views`);
+        if (res.ok) {
+          const viewers = await res.json();
+          if (viewers.length === 0) {
+            alert('Aucun ami n\'a encore vu ce statut.');
+          } else {
+            const names = viewers.map(v => `• ${v.username} (${formatChatTime(v.viewed_at)})`).join('\n');
+            alert(`Vu par (${viewers.length}) :\n${names}`);
+          }
+        }
+      } catch(e) {}
+    }
+
+    async function loadFriendRequests() {
+      try {
+        const res = await authFetch(`/api/friend-requests/${currentUser.id}`);
+        if (res.ok) {
+          friendRequests = await res.json();
+          const badge = document.getElementById('friendReqCount');
+          if (friendRequests.length > 0) {
+            badge.textContent = friendRequests.length;
+            badge.style.display = 'inline-block';
+          } else {
+            badge.style.display = 'none';
+          }
+          if (activeTab === 'friends') renderFriendsAndRequestsTab();
+        }
+      } catch (e) {}
+    }
+
+    function renderFriendsAndRequestsTab() {
+      const container = document.getElementById('sidebarContent');
+      container.innerHTML = '';
+
+      if (friendRequests.length > 0) {
+        const title = document.createElement('div');
+        title.className = 'section-title';
+        title.textContent = `Demandes d'amis (${friendRequests.length})`;
+        container.appendChild(title);
+
+        friendRequests.forEach(req => {
+          const card = document.createElement('div');
+          card.className = 'friend-req-card';
+          card.innerHTML = `
+            <div class="req-user-info">
+              <img src="${req.profile_pic || defaultAvatar()}" style="width:36px;height:36px;border-radius:50%;">
+              <strong style="font-size: 13px;">${escapeHtml(req.username)}</strong>
+            </div>
+            <div class="req-actions">
+              <button class="action-btn-sm btn-accept" onclick="respondFriendRequest(${req.request_id}, 'accept')">Accepter</button>
+              <button class="action-btn-sm btn-reject" onclick="respondFriendRequest(${req.request_id}, 'reject')">Refuser</button>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      }
+
+      const searchTitle = document.createElement('div');
+      searchTitle.className = 'section-title';
+      searchTitle.textContent = 'Trouver des contacts';
+      container.appendChild(searchTitle);
+
+      if (searchResults.length > 0) {
+        searchResults.forEach(user => {
+          const card = document.createElement('div');
+          card.className = 'friend-req-card';
+          let actionBtn = `<button class="action-btn-sm btn-accept" onclick="sendFriendRequest(${user.id})">Ajouter</button>`;
+          if (user.friendship_status === 'accepted') actionBtn = `<span style="font-size: 11px; color: var(--online); font-weight: 600;">✓ Ami</span>`;
+          else if (user.friendship_status === 'pending') actionBtn = `<span style="font-size: 11px; color: var(--text-muted);">En attente</span>`;
+
+          card.innerHTML = `
+            <div class="req-user-info">
+              <img src="${user.profile_pic || defaultAvatar()}" style="width:36px;height:36px;border-radius:50%;">
+              <div>
+                <strong style="font-size: 13px;">${escapeHtml(user.username)}</strong>
+                <div style="font-size: 11px; color: var(--text-muted);">${escapeHtml(user.email)}</div>
+              </div>
+            </div>
+            <div>${actionBtn}</div>
+          `;
+          container.appendChild(card);
+        });
+      } else {
+        const hint = document.createElement('div');
+        hint.style.cssText = 'font-size: 12px; color: var(--text-muted); padding: 10px; text-align: center;';
+        hint.textContent = 'Recherchez un utilisateur dans la barre en haut.';
+        container.appendChild(hint);
+      }
+    }
+
+    let searchDebounce = null;
+    function handleSearchInput(e) {
+      const q = e.target.value.trim();
+      clearTimeout(searchDebounce);
+      if (!q) {
+        searchResults = [];
+        if (activeTab === 'chats') renderChatsList();
+        else if (activeTab === 'groups') renderGroupsList();
+        else if (activeTab === 'statuses') renderStatusesList();
+        else renderFriendsAndRequestsTab();
+        return;
+      }
+      searchDebounce = setTimeout(async () => {
+        try {
+          const res = await authFetch(`/api/users/search?q=${encodeURIComponent(q)}&userId=${currentUser.id}`);
+          if (res.ok) {
+            searchResults = await res.json();
+            if (activeTab === 'friends') renderFriendsAndRequestsTab();
+          }
+        } catch (err) {}
+      }, 250);
+    }
+
+    async function sendFriendRequest(receiverId) {
+      try {
+        const res = await authFetch('/api/friend-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ senderId: currentUser.id, receiverId })
+        });
+        if (res.ok) {
+          const u = searchResults.find(x => Number(x.id) === Number(receiverId));
+          if (u) u.friendship_status = 'pending';
+          renderFriendsAndRequestsTab();
+        }
+      } catch (e) {}
+    }
+
+    async function respondFriendRequest(requestId, action) {
+      try {
+        const res = await authFetch('/api/friend-request/respond', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requestId, action })
+        });
+        if (res.ok) {
+          await loadFriends();
+          await loadFriendRequests();
+        }
+      } catch (e) {}
+    }
+
+    function setupChatViewUI() {
+      document.getElementById('emptyChatState').style.display = 'none';
+      document.getElementById('activeChatHeader').style.display = 'flex';
+      document.getElementById('messagesContainer').style.display = 'flex';
+      document.getElementById('activeChatFooter').style.display = 'flex';
+      document.getElementById('chatView').classList.add('active-mobile');
+      document.getElementById('messageInput').focus();
+    }
+
+    function appendMessage(msg, type, isGroup = false) {
+      const container = document.getElementById('messagesContainer');
+      const typingBox = document.getElementById('typingBox');
+
+      const row = document.createElement('div');
+      row.className = `message-row ${type}`;
+
+      const bubble = document.createElement('div');
+      bubble.className = 'message-bubble';
+
+      if (isGroup && type === 'received' && msg.sender_username) {
+        const nameTag = document.createElement('span');
+        nameTag.className = 'sender-name-tag';
+        nameTag.textContent = msg.sender_username;
+        bubble.appendChild(nameTag);
+      }
+
+      const mediaUrl = msg.content && (msg.content.startsWith('/uploads/') || msg.media_type !== 'text') ? msg.content : null;
+
+      if (mediaUrl) {
+        const mediaWrap = document.createElement('div');
+        mediaWrap.className = 'media-bubble-wrap';
+        const filename = mediaUrl.split('/').pop();
+        const downloadLink = `/api/download/${filename}`;
+
+        if (msg.media_type === 'video' || mediaUrl.endsWith('.mp4') || mediaUrl.endsWith('.webm')) {
+          const video = document.createElement('video');
+          video.src = mediaUrl;
+          video.controls = true;
+          mediaWrap.appendChild(video);
+        } else {
+          const img = document.createElement('img');
+          img.src = mediaUrl;
+          img.alt = 'Photo';
+          img.onclick = () => openImageModal(mediaUrl);
+          mediaWrap.appendChild(img);
+        }
+
+        const dlBtn = document.createElement('a');
+        dlBtn.className = 'media-download-btn';
+        dlBtn.href = downloadLink;
+        dlBtn.setAttribute('download', filename);
+        dlBtn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span>Enregistrer</span>
+        `;
+        mediaWrap.appendChild(dlBtn);
+        bubble.appendChild(mediaWrap);
+      } else {
+        const textSpan = document.createElement('div');
+        textSpan.textContent = msg.content;
+        bubble.appendChild(textSpan);
+      }
+
+      const meta = document.createElement('div');
+      meta.className = 'message-meta';
+      const timeStr = formatMessageTime(msg.sent_at);
+      let ticksHtml = '';
+      if (type === 'sent' && !isGroup) {
+        ticksHtml = `<span class="read-ticks">${Boolean(msg.is_read) ? '✓✓' : '✓'}</span>`;
+      }
+      meta.innerHTML = `<span>${timeStr}</span> ${ticksHtml}`;
+      bubble.appendChild(meta);
+
+      row.appendChild(bubble);
+      container.insertBefore(row, typingBox);
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const text = input.value.trim();
+      if (!text || !currentChat) return;
+
+      if (currentChat.type === 'direct') {
+        socket.emit('send_message', {
+          sender_id: currentUser.id,
+          receiver_id: currentChat.id,
+          content: text,
+          media_type: 'text'
+        });
+      } else if (currentChat.type === 'group') {
+        socket.emit('send_group_message', {
+          sender_id: currentUser.id,
+          group_id: currentChat.id,
+          content: text,
+          media_type: 'text'
+        });
+      }
+
+      input.value = '';
+      stopTypingNow();
+    }
+
+    async function handleMediaSend(e) {
+      const file = e.target.files[0];
+      if (!file || !currentChat) return;
+
+      const formData = new FormData();
+      formData.append('media', file);
+
+      try {
+        const res = await fetch('/api/upload/media', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (res.ok && data.mediaUrl) {
+          if (currentChat.type === 'direct') {
+            socket.emit('send_message', {
+              sender_id: currentUser.id,
+              receiver_id: currentChat.id,
+              content: data.mediaUrl,
+              media_type: data.mediaType || 'image'
+            });
+          } else if (currentChat.type === 'group') {
+            socket.emit('send_group_message', {
+              sender_id: currentUser.id,
+              group_id: currentChat.id,
+              content: data.mediaUrl,
+              media_type: data.mediaType || 'image'
+            });
+          }
+        } else {
+          alert(data.error || 'Erreur lors de l\'envoi du fichier.');
+        }
+      } catch (err) { alert('Erreur envoi'); }
+      e.target.value = '';
+    }
+
+    let isCurrentlyTyping = false;
+    let typingTimer = null;
+    function handleTypingEvent() {
+      if (!currentChat) return;
+      if (!isCurrentlyTyping) {
+        isCurrentlyTyping = true;
+        if (currentChat.type === 'direct') {
+          socket.emit('typing', { sender_id: currentUser.id, receiver_id: currentChat.id });
+        } else if (currentChat.type === 'group') {
+          socket.emit('group_typing', { sender_id: currentUser.id, sender_name: currentUser.username, group_id: currentChat.id });
+        }
+      }
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => stopTypingNow(), 1500);
+    }
+
+    function stopTypingNow() {
+      if (isCurrentlyTyping && currentChat) {
+        isCurrentlyTyping = false;
+        if (currentChat.type === 'direct') {
+          socket.emit('stop_typing', { sender_id: currentUser.id, receiver_id: currentChat.id });
+        } else if (currentChat.type === 'group') {
+          socket.emit('group_stop_typing', { sender_id: currentUser.id, group_id: currentChat.id });
+        }
+      }
+    }
+
+    function handleInputKey(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    }
+
+    async function markMessagesAsRead(senderId) {
+      try {
+        await authFetch('/api/messages/read', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ senderId, receiverId: currentUser.id })
+        });
+        const f = friendsList.find(x => Number(x.id) === Number(senderId));
+        if (f) { f.unread_count = 0; renderChatsList(); }
+      } catch (e) {}
+    }
+
+    function handleHeaderDetailsClick() {
+      if (currentChat && currentChat.type === 'group') {
+        openGroupDetailsModal();
+      }
+    }
+
+    function scrollToBottom() {
+      const container = document.getElementById('messagesContainer');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function closeActiveChatOnMobile() {
+      document.getElementById('chatView').classList.remove('active-mobile');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    function openImageModal(src) {
+      document.getElementById('modalImg').src = src;
+      document.getElementById('imageModal').style.display = 'flex';
+    }
+
+    function logout() {
+      if (confirm('Voulez-vous vous déconnecter ?')) {
+        localStorage.removeItem('dark_link_user');
+        localStorage.removeItem('dark_link_token');
+        window.location.href = 'index.html';
+      }
+    }
+
+    function formatMessageTime(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function formatChatTime(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      const now = new Date();
+      if (d.toDateString() === now.toDateString()) {
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      return d.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+    }
+
+    function defaultAvatar() {
+      return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23888'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+    }
+
+    function defaultGroupAvatar() {
+      return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231a6eff'%3E%3Cpath d='M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'/%3E%3C/svg%3E";
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return text.toString().replace(/[&<>"']/g, m => map[m]);
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

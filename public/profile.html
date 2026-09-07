@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Dark Link — Mon Profil</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #0a0a0f;
+      --bg-card: #111118;
+      --bg-input: #1a1a24;
+      --border-color: #262638;
+      --primary: #1a6eff;
+      --primary-hover: #3b82f6;
+      --primary-glow: rgba(26, 110, 255, 0.35);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: var(--bg-main);
+      color: var(--text-main);
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px;
+      padding-top: max(20px, env(safe-area-inset-top));
+      padding-bottom: max(30px, env(safe-area-inset-bottom));
+    }
+
+    .profile-wrapper {
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .top-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: var(--text-main);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      min-height: 40px;
+    }
+
+    .back-btn:hover {
+      background: var(--bg-input);
+      border-color: var(--primary);
+    }
+
+    .back-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .page-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .profile-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 30px 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .avatar-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .avatar-container {
+      position: relative;
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      cursor: pointer;
+      margin-bottom: 12px;
+      box-shadow: 0 8px 24px var(--primary-glow);
+    }
+
+    .avatar-img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--primary);
+      background: var(--bg-input);
+    }
+
+    .avatar-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 600;
+      gap: 4px;
+    }
+
+    .avatar-container:hover .avatar-overlay {
+      opacity: 1;
+    }
+
+    .avatar-badge {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      background: var(--primary);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--bg-card);
+      color: #fff;
+    }
+
+    .avatar-badge svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .profile-name-display {
+      font-size: 19px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .profile-status-display {
+      font-size: 13px;
+      color: var(--text-muted);
+      max-width: 320px;
+      font-style: italic;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: var(--text-main);
+      font-size: 16px; /* 16px to prevent iOS auto-zoom */
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .form-input:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      background: #15151e;
+    }
+
+    .input-addon {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 5px;
+    }
+
+    .status-presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .preset-chip {
+      padding: 6px 12px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .preset-chip:hover, .preset-chip:active {
+      border-color: var(--primary);
+      color: var(--text-main);
+      background: #20202f;
+    }
+
+    .save-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--primary);
+      border: none;
+      border-radius: 10px;
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 6px 20px var(--primary-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 20px;
+      min-height: 48px;
+    }
+
+    .save-btn:hover {
+      background: var(--primary-hover);
+    }
+
+    .logout-btn {
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: 10px;
+      color: var(--danger);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+      min-height: 44px;
+    }
+
+    .logout-btn:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: var(--danger);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: max(20px, env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      background: #111118;
+      border: 1px solid var(--primary);
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+      font-size: 14px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      z-index: 100;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+      justify-content: center;
+    }
+
+    @media (max-width: 480px) {
+      .profile-card {
+        padding: 24px 16px;
+        border-radius: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="profile-wrapper">
+    <div class="top-nav">
+      <a href="chat.html" class="back-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Retour
+      </a>
+      <h1 class="page-title">Mon Profil</h1>
+      <div style="width: 60px;"></div>
+    </div>
+
+    <div class="profile-card">
+      <div class="avatar-section">
+        <input type="file" id="avatarFileInput" accept="image/*" style="display: none;" onchange="handleAvatarUpload(event)">
+        <div class="avatar-container" onclick="document.getElementById('avatarFileInput').click()">
+          <img id="avatarImg" class="avatar-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23888'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="Avatar">
+          <div class="avatar-overlay">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            <span>Modifier</span>
+          </div>
+          <div class="avatar-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+          </div>
+        </div>
+        <div class="profile-name-display" id="displayName">Chargement...</div>
+        <div class="profile-status-display" id="displayStatus">...</div>
+      </div>
+
+      <form id="profileForm" onsubmit="saveProfile(event)">
+        <div class="form-group">
+          <label class="form-label" for="inputUsername">Nom d'utilisateur</label>
+          <input type="text" id="inputUsername" class="form-input" required minlength="3">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="inputStatus">Statut / Message personnalisé</label>
+          <input type="text" id="inputStatus" class="form-input" placeholder="ex: En ligne et disponible">
+          <div class="status-presets">
+            <span class="preset-chip" onclick="setPresetStatus('Salut ! J\'utilise Dark Link.')">👋 Salut !</span>
+            <span class="preset-chip" onclick="setPresetStatus('En ligne et disponible')">🟢 Disponible</span>
+            <span class="preset-chip" onclick="setPresetStatus('Au travail / En réunion')">💼 Au travail</span>
+            <span class="preset-chip" onclick="setPresetStatus('Ne pas déranger')">⛔ Occupé</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="inputEmail">Adresse Email</label>
+          <input type="email" id="inputEmail" class="form-input" disabled>
+          <div class="input-addon">🔒 L'email ne peut pas être modifié.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="inputPhone">Numéro de Téléphone</label>
+          <input type="text" id="inputPhone" class="form-input" disabled>
+          <div class="input-addon">🔒 Lié à votre compte.</div>
+        </div>
+
+        <button type="submit" class="save-btn" id="saveBtn">
+          Sauvegarder les modifications
+        </button>
+      </form>
+
+      <button type="button" class="logout-btn" onclick="handleLogout()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        Se déconnecter
+      </button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    let currentUser = null;
+    let authToken = null;
+
+    function authFetch(url, options = {}) {
+      const headers = options.headers ? { ...options.headers } : {};
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      return fetch(url, { ...options, headers });
+    }
+
+    function showToast(msg, isSuccess = true) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.borderColor = isSuccess ? '#10b981' : '#ef4444';
+      t.style.display = 'flex';
+      setTimeout(() => { t.style.display = 'none'; }, 3000);
+    }
+
+    function initUser() {
+      const stored = localStorage.getItem('dark_link_user');
+      authToken = localStorage.getItem('dark_link_token');
+
+      if (!stored) {
+        window.location.href = 'index.html';
+        return;
+      }
+      currentUser = JSON.parse(stored);
+      fetchLatestUserData();
+    }
+
+    async function fetchLatestUserData() {
+      try {
+        const res = await authFetch(`/api/users/me?userId=${currentUser.id}`);
+        if (res.ok) {
+          currentUser = await res.json();
+          localStorage.setItem('dark_link_user', JSON.stringify(currentUser));
+        }
+      } catch(e) {}
+      renderUserData();
+    }
+
+    function renderUserData() {
+      document.getElementById('displayName').textContent = currentUser.username || 'Utilisateur';
+      document.getElementById('displayStatus').textContent = currentUser.status_message || 'Salut ! J\'utilise Dark Link.';
+      document.getElementById('inputUsername').value = currentUser.username || '';
+      document.getElementById('inputStatus').value = currentUser.status_message || '';
+      document.getElementById('inputEmail').value = currentUser.email || '';
+      document.getElementById('inputPhone').value = currentUser.phone || '';
+
+      if (currentUser.profile_pic) {
+        document.getElementById('avatarImg').src = currentUser.profile_pic;
+      }
+    }
+
+    function setPresetStatus(text) {
+      document.getElementById('inputStatus').value = text;
+    }
+
+    async function saveProfile(e) {
+      e.preventDefault();
+      const username = document.getElementById('inputUsername').value.trim();
+      const status_message = document.getElementById('inputStatus').value.trim();
+      const btn = document.getElementById('saveBtn');
+
+      btn.disabled = true;
+      btn.textContent = 'Enregistrement...';
+
+      try {
+        const res = await authFetch('/api/users/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: currentUser.id, username, status_message })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          showToast(data.error || 'Erreur lors de la sauvegarde.', false);
+        } else {
+          currentUser.username = username;
+          currentUser.status_message = status_message;
+          localStorage.setItem('dark_link_user', JSON.stringify(currentUser));
+          renderUserData();
+          showToast('✅ Profil mis à jour !', true);
+        }
+      } catch (err) {
+        showToast('Erreur de connexion.', false);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Sauvegarder les modifications';
+      }
+    }
+
+    async function handleAvatarUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('avatar', file);
+      formData.append('userId', currentUser.id);
+
+      showToast('Téléversement...', true);
+
+      try {
+        const res = await authFetch('/api/upload/avatar', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await res.json();
+        if (res.ok && data.avatarUrl) {
+          currentUser.profile_pic = data.avatarUrl;
+          localStorage.setItem('dark_link_user', JSON.stringify(currentUser));
+          document.getElementById('avatarImg').src = data.avatarUrl;
+          showToast('📸 Photo mise à jour !', true);
+        } else {
+          showToast(data.error || 'Erreur lors de l\'envoi.', false);
+        }
+      } catch(err) {
+        showToast('Erreur d\'envoi.', false);
+      }
+    }
+
+    function handleLogout() {
+      if (confirm('Voulez-vous vous déconnecter ?')) {
+        localStorage.removeItem('dark_link_user');
+        localStorage.removeItem('dark_link_token');
+        window.location.href = 'index.html';
+      }
+    }
+
+    initUser();
+  </script>
+</body>
+</html>
