@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#0a0a0f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
   <title>Dark Link — Messagerie</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1396,6 +1397,38 @@
       return fetch(url, { ...options, headers });
     }
 
+    let originalTitle = document.title;
+    let blinkInterval = null;
+    let isWindowFocused = true;
+
+    window.addEventListener('focus', () => {
+      isWindowFocused = true;
+      clearInterval(blinkInterval);
+      document.title = originalTitle;
+    });
+
+    window.addEventListener('blur', () => {
+      isWindowFocused = false;
+    });
+
+    function playNotificationSound() {
+      const audio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAD//wEA");
+      audio.play().catch(() => {});
+    }
+
+    function triggerLocalNotification() {
+      if (!isWindowFocused) {
+        playNotificationSound();
+        if (!blinkInterval) {
+          let step = 0;
+          blinkInterval = setInterval(() => {
+            document.title = step % 2 === 0 ? "💬 Nouveau message !" : originalTitle;
+            step++;
+          }, 1000);
+        }
+      }
+    }
+
     function init() {
       const stored = localStorage.getItem('dark_link_user');
       authToken = localStorage.getItem('dark_link_token');
@@ -1417,6 +1450,13 @@
       loadGroups();
       loadStatuses();
       loadFriendRequests();
+
+      // Register SW & Web Push
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+          console.log('SW enregistré', reg);
+        }).catch(err => console.error('Erreur SW', err));
+      }
     }
 
     function setupSocket() {
@@ -1430,6 +1470,7 @@
       });
 
       socket.on('receive_message', (msg) => {
+        triggerLocalNotification();
         if (currentChat && currentChat.type === 'direct' && Number(msg.sender_id) === Number(currentChat.id)) {
           appendMessage(msg, 'received');
           scrollToBottom();

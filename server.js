@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
+const webpush = require('web-push');
 
 const app = express();
 const server = http.createServer(app);
@@ -20,6 +21,11 @@ const io = new Server(server, {
 
 // Clé secrète JWT
 const JWT_SECRET = process.env.JWT_SECRET || 'dark_link_ultra_secure_secret_key_2026_!@#$%^&*';
+
+// Web Push VAPID Keys
+const publicVapidKey = process.env.VAPID_PUBLIC_KEY || 'BGMZGsYg4HvZK_ozhUgWtZyktzvxf7jNDLoc4Thg_5xOnP8TwrynskG6udipXfD0kq7p93ztiAg7A0HoLwl4_qM';
+const privateVapidKey = process.env.VAPID_PRIVATE_KEY || 'ssCe6VI7VIWYUN4q02t-CXlV19s2J_ivjcsJBvC3hfQ';
+webpush.setVapidDetails('mailto:contact@darklink.local', publicVapidKey, privateVapidKey);
 
 // Middleware de sécurité pour les en-têtes HTTP
 app.use((req, res, next) => {
@@ -204,6 +210,16 @@ async function initDatabase() {
             )
         `);
 
+        // 8. Table push_subscriptions
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS push_subscriptions (
+                id SERIAL PRIMARY KEY,
+                user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                subscription JSONB NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         console.log('✅ Base de données PostgreSQL initialisée avec succès.');
     } catch (err) {
         console.error('⚠️ Avertissement lors de l\'initialisation des tables PostgreSQL:', err.message);
@@ -246,8 +262,28 @@ function isUserOnline(userId) {
 }
 
 // -------------------------------------------------------------
-// ROUTES D'AUTHENTIFICATION
+// ROUTES D'AUTHENTIFICATION ET WEB PUSH
 // -------------------------------------------------------------
+
+app.get('/api/vapidPublicKey', (req, res) => {
+    res.json({ publicKey: publicVapidKey });
+});
+
+app.post('/api/subscribe', authenticateToken, async (req, res) => {
+    const subscription = req.body;
+    const userId = req.user.id;
+
+    try {
+        await db.query(
+            'INSERT INTO push_subscriptions (user_id, subscription) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+            [userId, subscription]
+        );
+        res.status(201).json({ message: 'Abonnement Push enregistré avec succès.' });
+    } catch (err) {
+        console.error('Erreur lors de l\'enregistrement de l\'abonnement push:', err);
+        res.status(500).json({ error: 'Erreur serveur.' });
+    }
+});
 
 // Inscription
 app.post('/register', authLimiter, async (req, res) => {
