@@ -1,6 +1,6 @@
 {
-  "name": "Dark Link",
-  "short_name": "Dark Link",
+  "name": "Silver",
+  "short_name": "Silver",
   "description": "Application de messagerie temps réel moderne.",
   "start_url": "./index.html",
   "display": "standalone",

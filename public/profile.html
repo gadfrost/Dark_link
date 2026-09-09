@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0a0a0f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Dark Link — Mon Profil</title>
+  <title>Silver — Mon Profil</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -367,7 +367,7 @@
           <label class="form-label" for="inputStatus">Statut / Message personnalisé</label>
           <input type="text" id="inputStatus" class="form-input" placeholder="ex: En ligne et disponible">
           <div class="status-presets">
-            <span class="preset-chip" onclick="setPresetStatus('Salut ! J\'utilise Dark Link.')">👋 Salut !</span>
+            <span class="preset-chip" onclick="setPresetStatus('Salut ! J\'utilise Silver.')">👋 Salut !</span>
             <span class="preset-chip" onclick="setPresetStatus('En ligne et disponible')">🟢 Disponible</span>
             <span class="preset-chip" onclick="setPresetStatus('Au travail / En réunion')">💼 Au travail</span>
             <span class="preset-chip" onclick="setPresetStatus('Ne pas déranger')">⛔ Occupé</span>
@@ -445,7 +445,7 @@
 
     function renderUserData() {
       document.getElementById('displayName').textContent = currentUser.username || 'Utilisateur';
-      document.getElementById('displayStatus').textContent = currentUser.status_message || 'Salut ! J\'utilise Dark Link.';
+      document.getElementById('displayStatus').textContent = currentUser.status_message || 'Salut ! J\'utilise Silver.';
       document.getElementById('inputUsername').value = currentUser.username || '';
       document.getElementById('inputStatus').value = currentUser.status_message || '';
       document.getElementById('inputEmail').value = currentUser.email || '';

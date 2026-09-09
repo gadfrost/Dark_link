@@ -137,7 +137,7 @@ async function initDatabase() {
                 phone VARCHAR(50) UNIQUE NOT NULL,
                 password VARCHAR(255) NOT NULL,
                 profile_pic TEXT,
-                status_message VARCHAR(255) DEFAULT 'Salut ! J''utilise Dark Link.',
+                status_message VARCHAR(255) DEFAULT 'Salut ! J''utilise Silver.',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
@@ -339,7 +339,7 @@ app.post('/register', authLimiter, async (req, res) => {
             VALUES ($1, $2, $3, $4, $5) 
             RETURNING id
         `;
-        const result = await db.query(sql, [username.trim(), email.trim(), phone.trim(), hashedPassword, 'Salut ! J\'utilise Dark Link.']);
+        const result = await db.query(sql, [username.trim(), email.trim(), phone.trim(), hashedPassword, 'Salut ! J\'utilise Silver.']);
         const userId = result.rows[0].id;
         const token = jwt.sign({ id: userId, username: username.trim(), email: email.trim() }, JWT_SECRET, { expiresIn: '14d' });
 
@@ -1202,6 +1202,6 @@ io.on('connection', (socket) => {
 // Port d'écoute et initialisation
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, async () => {
-    console.log(`🚀 Serveur Dark Link (PostgreSQL) démarré sur le port ${PORT}`);
+    console.log(`🚀 Serveur Silver (PostgreSQL) démarré sur le port ${PORT}`);
     await initDatabase();
 });
